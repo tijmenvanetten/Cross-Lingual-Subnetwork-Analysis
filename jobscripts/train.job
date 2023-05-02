@@ -1,0 +1,32 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu_titanrtx_shared_course
+#SBATCH --gres=gpu:1
+#SBATCH --job-name=atcstrain
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=3
+#SBATCH --time=04:00:00
+#SBATCH --mem=32000M
+#SBATCH --output=slurm_output_%A.out
+
+echo loading Lisa modules...
+module purge
+module load 2022
+module load Miniconda3/4.12.0
+
+echo activating virtual env...
+source activate atcs2023
+
+echo fetching and pulling latest changes from remote dir...
+cd $HOME/repos/atcs-t1-p2/
+git fetch && git pull
+
+echo running torch train file...
+srun python train.py
+
+echo adding, committing, and pushing results to remote dir...
+git add $HOME/repos/atcs-t1-p2/
+git commit -m "save results from run (automated commit from Lisa)."
+git push
+
+echo done.
