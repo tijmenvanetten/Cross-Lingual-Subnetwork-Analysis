@@ -1,0 +1,31 @@
+loading Lisa modules...
+activating virtual env...
+fetching and pulling latest changes from remote dir...
+Already up to date.
+running torch train file...
+Traceback (most recent call last):
+  File "/home/lcur1135/repos/atcs-t1-p2/train.py", line 2, in <module>
+srun: error: r34n1: task 0: Exited with exit code 1
+    from transformers import AutoTokenizer, AutoModelForMaskedLM, DataCollatorForLanguageModeling, Trainer, TrainingArguments
+ModuleNotFoundError: No module named 'transformers'
+adding, committing, and pushing results to remote dir...
+[main f7254e8] save results from run (automated commit from Lisa).
+ Committer: Sabijn Perdijk <lcur1135@test3.irc.sara.nl.irc.sara.nl>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 1 file changed, 11 insertions(+)
+ create mode 100644 jobscripts/slurm_output_11715611.out
+remote: Resolving deltas:   0% (0/1)        remote: Resolving deltas: 100% (1/1)        remote: Resolving deltas: 100% (1/1), completed with 1 local object.        
+To github.com:tijmenvanetten/atcs-t1-p2.git
+   ffca594..f7254e8  main -> main
+done.
