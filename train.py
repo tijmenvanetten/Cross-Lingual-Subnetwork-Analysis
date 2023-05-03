@@ -46,7 +46,7 @@ if __name__ == '__main__':
     model = AutoModelForMaskedLM.from_pretrained(args.model)
 
     # Prepare dataset
-    cc100_dataset = prepare_dataset(args)
+    cc100_dataset = prepare_dataset(args, tokenizer)
 
     # Use end of sentence token as pad token
     tokenizer.pad_token = tokenizer.eos_token
