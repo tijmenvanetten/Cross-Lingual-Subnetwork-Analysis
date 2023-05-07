@@ -76,7 +76,12 @@ if __name__ == '__main__':
                         help='Threshold for masking heads and mlps.')
     parser.add_argument('--try_masking', default=False, type=bool,
                         help='Whether to try masking heads and mlps.')
-
+    parser.add_argument('--test_split', default=0.2, type=float,
+                        help='Percentage of test split.')
+    parser.add_argument('--seed', default=42, type=int,
+                        help='Random seed.')
+    parser.add_argument('--output_dir', default='results', type=str,
+                        help='Output directory.')
     
     args = parser.parse_args()
 
