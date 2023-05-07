@@ -1,4 +1,4 @@
-name: atcs-practical1-2
+name: atcs-project
 channels:
   - defaults
 dependencies:
