@@ -4,6 +4,7 @@ Based on: https://huggingface.co/docs/transformers/main/tasks/masked_language_mo
 """
 from datasets import load_dataset
 
+
 def preprocess_function(examples, tokenizer):
     return tokenizer([" ".join(x) for x in examples["text"]])
 
@@ -28,7 +29,8 @@ def group_texts(examples):
 
 def prepare_dataset(args, tokenizer):
 
-    cc100 = load_dataset("cc100", lang=args.languages, split="train")
+    cc100 = load_dataset("cc100", lang=args.languages, split="test")
+
     cc100 = cc100.train_test_split(test_size=args.test_split)
 
     tokenized_cc100 = cc100.map(
@@ -36,7 +38,7 @@ def prepare_dataset(args, tokenizer):
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
             num_proc=4,
-            remove_columns=cc100['train'].column_names
+            remove_columns=cc100['test'].column_names
         )
 
     dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=4)
