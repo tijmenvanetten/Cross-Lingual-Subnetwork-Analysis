@@ -36,10 +36,11 @@ def prepare_dataset(args, tokenizer):
             preprocess_function,
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
+            num_procs=8,
             remove_columns=cc100['train'].column_names
         )
 
-    dataset = tokenized_cc100.map(group_texts, batched=True)
+    dataset = tokenized_cc100.map(group_texts, batched=True, num_procs=8)
 
     return dataset
 
