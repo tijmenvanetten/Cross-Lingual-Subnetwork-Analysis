@@ -1,4 +1,4 @@
-name: atcs-project
+name: atcs-project2
 channels:
   - defaults
 dependencies:
@@ -115,7 +115,6 @@ dependencies:
     - scipy==1.10.1
     - seaborn==0.12.2
     - send2trash==1.8.0
-    - senteval==0.1.0
     - six==1.16.0
     - sniffio==1.3.0
     - soupsieve==2.4.1
