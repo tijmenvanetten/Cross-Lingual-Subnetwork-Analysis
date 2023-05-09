@@ -1,7 +1,7 @@
 import argparse
 from transformers import AutoTokenizer, AutoModelForMaskedLM, DataCollatorForLanguageModeling, Trainer, TrainingArguments
-from datasets.utils.logging import disable_progress_bar
-disable_progress_bar()
+# from datasets.utils.logging import disable_progress_bar
+# disable_progress_bar()
 
 from data import *
 
