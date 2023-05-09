@@ -28,7 +28,6 @@ def group_texts(examples):
     return result
 
 def prepare_dataset(args, tokenizer):
-
     cc100 = load_dataset("cc100", lang=args.languages, split="train")
 
     # cc100 = cc100.select(range(int(len(cc100)*0.001)))
@@ -40,11 +39,11 @@ def prepare_dataset(args, tokenizer):
             preprocess_function,
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
-            num_proc=4,
+            num_proc=3,
             remove_columns=cc100['train'].column_names
         )
 
-    dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=4)
+    dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=3)
 
     return dataset
 
