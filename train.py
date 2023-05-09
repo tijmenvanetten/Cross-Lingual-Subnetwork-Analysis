@@ -26,11 +26,11 @@ def train(args, model, lm_dataset, data_collator):
         eval_dataset=lm_dataset["test"],
         data_collator=data_collator
     )
-
+    print(f'Started actual training.', flush=True)
     trainer.train()
-
+    print(f'Finished training and start evaluating.', flush=True)
     eval_results = trainer.evaluate()
-    print(eval_results)
+    print(eval_results, flush=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -48,8 +48,9 @@ if __name__ == '__main__':
     model = AutoModelForMaskedLM.from_pretrained(args.model)
 
     # Prepare dataset
+    print(f'Started data preprocessing...', flush=True)
     cc100_dataset = prepare_dataset(args, tokenizer)
-
+    print(f'Finished data preprocessing.', flush=True)
     # Use end of sentence token as pad token
     tokenizer.pad_token = tokenizer.eos_token
 
