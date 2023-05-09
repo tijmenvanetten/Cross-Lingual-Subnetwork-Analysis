@@ -6,7 +6,7 @@ from datasets import load_dataset
 
 
 def preprocess_function(examples, tokenizer):
-    return tokenizer([" ".join(x) for x in examples["text"]])
+    return tokenizer(examples['text'])
 
 def group_texts(examples):
     block_size = 128
