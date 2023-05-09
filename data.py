@@ -24,21 +24,24 @@ def group_texts(examples):
         for k, t in concatenated_examples.items()
     }
     result["labels"] = result["input_ids"].copy()
-    print(result)
+    # print(result)
     return result
 
 def prepare_dataset(args, tokenizer):
 
-    cc100 = load_dataset("cc100", lang=args.languages, split="test")
+    cc100 = load_dataset("cc100", lang=args.languages, split="train")
+
+    # cc100 = cc100.select(range(int(len(cc100)*0.001)))
 
     cc100 = cc100.train_test_split(test_size=args.test_split)
+
 
     tokenized_cc100 = cc100.map(
             preprocess_function,
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
             num_proc=4,
-            remove_columns=cc100['test'].column_names
+            remove_columns=cc100['train'].column_names
         )
 
     dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=4)

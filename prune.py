@@ -8,7 +8,7 @@ from transformers import (AutoModelForMaskedLM, AutoTokenizer,
                           TrainingArguments)
 
 from data import prepare_dataset
-from masking import mask_heads_mlps, prune_heads_mlps
+from masking import compute_heads_importance, mask_heads, prune_heads
 
 
 def set_seed(args):
@@ -51,15 +51,21 @@ def prune(args, model, lm_dataset, data_collator):
     # Print one example batch from dataloader
     for batch in eval_dataloader:
         print(batch)
+        
+        print('--------------')
+        for t in batch:
+            print(t)
         break
 
-    print("Masking...")
-    if args.try_masking and args.masking_threshold > 0.0 and args.masking_treshold < 1.0:
-        head_mask, mlp_mask = mask_heads_mlps(args, model, eval_dataloader)
-        prune_heads_mlps(args, model, eval_dataloader, head_mask, mlp_mask)
-    # else:
-    #     # Compute head entropy and importance score
-    #     compute_heads_mlps_importance(args, model, eval_dataloader)
+
+    # Try head masking (set heads to zero until the score goes under a threshole)
+    # and head pruning (remove masked heads and see the effect on the network)
+    if args.try_masking and args.masking_threshold > 0.0 and args.masking_threshold < 1.0:
+        head_mask = mask_heads(args, model, eval_dataloader)
+        prune_heads(args, model, eval_dataloader, head_mask)
+    else:
+        #Compute head entropy and importance score
+        compute_heads_importance(args, model, eval_dataloader)
 
 
     
@@ -74,7 +80,7 @@ if __name__ == '__main__':
                         help='Global mask to use.')
     parser.add_argument('--masking_threshold', default=0.9, type=float, choices=range(0,1),
                         help='Threshold for masking heads and mlps.')
-    parser.add_argument('--try_masking', default=False, type=bool,
+    parser.add_argument('--try_masking', default=True, type=bool,
                         help='Whether to try masking heads and mlps.')
     parser.add_argument('--test_split', default=0.2, type=float,
                         help='Percentage of test split.')
@@ -82,8 +88,22 @@ if __name__ == '__main__':
                         help='Random seed.')
     parser.add_argument('--output_dir', default='results', type=str,
                         help='Output directory.')
+    parser.add_argument('--local_rank', default=-1, type=int,
+                        help='Local rank.')
+    parser.add_argument(
+        "--dont_normalize_importance_by_layer", action="store_true", help="Don't normalize importance score by layers"
+    )
+    parser.add_argument(
+        "--dont_normalize_global_importance",
+        action="store_true",
+        help="Don't normalize all importance scores between 0 and 1",
+    )
+    parser.add_argument(
+        "--masking_amount", default=0.1, type=float, help="Amount to heads to masking at each masking step."
+    )
     
     args = parser.parse_args()
+    args.output_mode = 'classification'
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     model = AutoModelForMaskedLM.from_pretrained(args.model)
