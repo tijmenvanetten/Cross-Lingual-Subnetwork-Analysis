@@ -29,7 +29,7 @@ def group_texts(examples):
 
 def prepare_dataset(args, tokenizer):
 
-    cc100 = load_dataset("cc100", lang=args.languages, split="train[:1000]")
+    cc100 = load_dataset("cc100", lang=args.languages, split="train")
     cc100 = cc100.train_test_split(test_size=args.test_split)
 
     tokenized_cc100 = cc100.map(
