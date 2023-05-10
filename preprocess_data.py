@@ -37,6 +37,9 @@ def group_texts(examples):
 def prepare_dataset(args, tokenizer):
     cc100 = load_dataset("cc100", lang=args.languages, split="train")
 
+    
+    cc100 = cc100.train_test_split(test_size=0.2)
+
     tokenized_cc100 = cc100.map(
             preprocess_function,
             fn_kwargs={"tokenizer" : tokenizer},
