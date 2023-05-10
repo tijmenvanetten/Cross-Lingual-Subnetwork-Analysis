@@ -1,5 +1,5 @@
 import argparse
-from transformers import AutoTokenizer, AutoModelForMaskedLM, DataCollatorForLanguageModeling, Trainer, TrainingArguments
+from transformers import AutoTokenizer, AutoModelForMaskedLM, DataCollatorForLanguageModeling, Trainer, TrainingArguments, EarlyStoppingCallback
 # from datasets.utils.logging import disable_progress_bar
 # disable_progress_bar()
 
@@ -22,8 +22,9 @@ def train(args, model, lm_dataset, data_collator):
     trainer = Trainer(
         model=model,
         args=training_args,
+        callbacks=EarlyStoppingCallback(early_stopping_threshold=args.threshhold, early_stopping_patience=args.patience),
         train_dataset=lm_dataset["train"],
-        eval_dataset=lm_dataset["test"],
+        eval_dataset=lm_dataset["eval"],
         data_collator=data_collator
     )
     print(f'Started actual training.', flush=True)
@@ -31,6 +32,10 @@ def train(args, model, lm_dataset, data_collator):
     print(f'Finished training and start evaluating.', flush=True)
     eval_results = trainer.evaluate()
     print(eval_results, flush=True)
+    print(f'Finished training and start evaluating.', flush=True)
+    test_results = trainer.predict()
+    print(eval_results, flush=True)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -39,8 +44,14 @@ if __name__ == '__main__':
                         help='Language to finetune on.')
     parser.add_argument('--model', default="xlm-roberta-base", type=str,
                        help='Pretrained model to use.')
-    parser.add_argument('--test_split', default=0.2, type=float, choices=range(0,1),
-                        help='Which percentage of the data to use for testing')
+    parser.add_argument('--num_samples', default=5000, type=int,
+                       help='Number of data samples per language')
+    parser.add_argument('--patience', default=3, type=int,
+                       help='Number of epochs to wait before early stopping')
+    parser.add_argument('--threshold', default=3, type=int,
+                       help='Number of epochs to wait before early stopping')
+    parser.add_argument('--train_split', default=0.8, type=float, choices=range(0,1),
+                        help='Which percentage of the data to use for training')
     
     args = parser.parse_args()
 

@@ -2,7 +2,7 @@
 Dataset: https://huggingface.co/datasets/cc100
 Based on: https://huggingface.co/docs/transformers/main/tasks/masked_language_modeling
 """
-from datasets import load_dataset
+from datasets import load_dataset, DatasetDict
 
 def preprocess_function(examples, tokenizer):
     # return tokenizer([" ".join(x) for x in examples["text"]])
@@ -28,9 +28,18 @@ def group_texts(examples):
     return result
 
 def prepare_dataset(args, tokenizer):
+    n_langs = len(args.languages) if isinstance(args.languages, list) else 1
 
-    cc100 = load_dataset("cc100", lang=args.languages, split="train")
-    cc100 = cc100.train_test_split(test_size=args.test_split)
+    cc100 = load_dataset("cc100", lang=args.languages, split="train").shuffle(seed=42).select(range(args.num_samples * n_langs))
+
+    train_testvalid = cc100.train_test_split(test_size=1-args.train_split)
+    # split the testalid in half test, half valid
+    test_valid = train_testvalid["test"].train_test_split(test_size=0.5)
+
+    cc100 = DatasetDict({
+        "train": train_testvalid["train"],
+        "eval": test_valid["train"],
+        "test": test_valid["test"]})
 
     tokenized_cc100 = cc100.map(
             preprocess_function,
