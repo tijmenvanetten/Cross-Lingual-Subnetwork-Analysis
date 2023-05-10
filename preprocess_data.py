@@ -31,14 +31,14 @@ def group_texts(examples):
     return result
 
 def prepare_dataset(args, tokenizer):
-    cc100 = load_dataset("cc100", lang=args.languages, split="train")
+    cc100 = load_dataset("cc100", lang=args.languages)
 
     tokenized_cc100 = cc100.map(
             preprocess_function,
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
             num_proc=6,
-            remove_columns=cc100['train'].column_names
+            # remove_columns=cc100['train'].column_names
         )
 
     dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=6)
