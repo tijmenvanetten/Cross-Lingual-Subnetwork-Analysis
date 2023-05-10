@@ -15,7 +15,7 @@ def group_texts(examples):
     block_size = 128
 
     print(examples.keys())
-    break
+    return None    
 
     concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
 
