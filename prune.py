@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 import torch
+from datasets import load_from_disk
 from transformers import (AutoModelForMaskedLM, AutoTokenizer,
                           DataCollatorForLanguageModeling, Trainer,
                           TrainingArguments)
@@ -101,6 +102,8 @@ if __name__ == '__main__':
     parser.add_argument(
         "--masking_amount", default=0.1, type=float, help="Amount to heads to masking at each masking step."
     )
+    parser.add_argument('--data_dir', default='preprocessed_cc_100_fy', type=str,
+                        help='Data directory.')
     
     args = parser.parse_args()
     args.output_mode = 'classification'
@@ -110,13 +113,16 @@ if __name__ == '__main__':
 
     # Prepare dataset
     print("Preparing dataset...")
-    cc100_dataset = prepare_dataset(args, tokenizer)
+    cc100_dataset = load_from_disk(args.data_dir)
+
+    # Create data split
+    cc100_dataset.train_test_split(test_size=args.test_split)
 
     # Use end of sentence token as pad token
-    # tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token = tokenizer.eos_token
 
-    # # Padding and batching
-    # data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
+    # Padding and batching
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
 
-    # # Pruning
-    # prune(args, model, cc100_dataset, data_collator)
+    # Pruning
+    prune(args, model, cc100_dataset, data_collator)
