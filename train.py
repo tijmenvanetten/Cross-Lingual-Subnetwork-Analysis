@@ -22,25 +22,25 @@ def train(args, model, lm_dataset, data_collator):
     trainer = Trainer(
         model=model,
         args=training_args,
-        callbacks=EarlyStoppingCallback(early_stopping_threshold=args.threshhold, early_stopping_patience=args.patience),
+        callbacks=EarlyStoppingCallback(early_stopping_threshold=args.threshold, early_stopping_patience=args.patience),
         train_dataset=lm_dataset["train"],
         eval_dataset=lm_dataset["eval"],
         data_collator=data_collator
     )
     print(f'Started actual training.', flush=True)
     trainer.train()
-    print(f'Finished training and start evaluating.', flush=True)
+    print(f'Finished training and start evaluating evaluation set', flush=True)
     eval_results = trainer.evaluate()
     print(eval_results, flush=True)
-    print(f'Finished training and start evaluating.', flush=True)
+    print(f'Finished evaluating and start evaluating on test set', flush=True)
     test_results = trainer.predict()
-    print(eval_results, flush=True)
+    print(test_results, flush=True)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('--languages', default='nl', type=str,
+    parser.add_argument('--languages', nargs="*", default=['nl', 'fy', 'en', 'he', 'ar', 'hi', 'ur'],
                         help='Language to finetune on.')
     parser.add_argument('--model', default="xlm-roberta-base", type=str,
                        help='Pretrained model to use.')
@@ -48,8 +48,8 @@ if __name__ == '__main__':
                        help='Number of data samples per language')
     parser.add_argument('--patience', default=3, type=int,
                        help='Number of epochs to wait before early stopping')
-    parser.add_argument('--threshold', default=3, type=int,
-                       help='Number of epochs to wait before early stopping')
+    parser.add_argument('--threshold', default=0.1, type=float,
+                       help='Specify how much performance metric must improve before early stopping')
     parser.add_argument('--train_split', default=0.8, type=float, choices=range(0,1),
                         help='Which percentage of the data to use for training')
     
