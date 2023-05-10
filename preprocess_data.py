@@ -5,7 +5,7 @@ Based on: https://huggingface.co/docs/transformers/main/tasks/masked_language_mo
 import argparse
 
 from datasets import load_dataset
-from transformers import AutoTokenizer
+from transformers import AutoModelForMaskedLM, AutoTokenizer
 
 
 def preprocess_function(examples, tokenizer):
@@ -51,6 +51,7 @@ def prepare_dataset(args, tokenizer):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--languages', type=str, default='nl')
+    parser.add_argument('--model', type=str, default='xlm-roberta-base')
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
