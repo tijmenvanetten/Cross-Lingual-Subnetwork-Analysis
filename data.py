@@ -39,14 +39,13 @@ def prepare_dataset(args, tokenizer):
             preprocess_function,
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
-            num_proc=6,
+            num_proc=8,
             remove_columns=cc100['train'].column_names
         )
 
-    dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=6)
+    dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=8)
 
-    # Save preprocessed dataset to huggingface
-    3
+    # Save preprocessed dataset to disk
+    dataset.save_to_disk('preprocessed_cc100_nl')
 
     return dataset
-

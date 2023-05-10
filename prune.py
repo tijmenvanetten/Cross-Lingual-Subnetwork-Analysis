@@ -113,10 +113,10 @@ if __name__ == '__main__':
     cc100_dataset = prepare_dataset(args, tokenizer)
 
     # Use end of sentence token as pad token
-    tokenizer.pad_token = tokenizer.eos_token
+    # tokenizer.pad_token = tokenizer.eos_token
 
-    # Padding and batching
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
+    # # Padding and batching
+    # data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
 
-    # Pruning
-    prune(args, model, cc100_dataset, data_collator)
+    # # Pruning
+    # prune(args, model, cc100_dataset, data_collator)

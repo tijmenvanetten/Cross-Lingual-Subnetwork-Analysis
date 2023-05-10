@@ -14,30 +14,27 @@ def preprocess_function(examples, tokenizer):
 def group_texts(examples):
     block_size = 128
 
-    # concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
-    concatenated_examples = sum(examples, [])
+    concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
 
-    # total_length = len(concatenated_examples[list(examples.keys())[0]])
-    total_length = len(concatenated_examples)
+    total_length = len(concatenated_examples[list(examples.keys())[0]])
     # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
     # customize this part to your needs.
     if total_length >= block_size:
         total_length = (total_length // block_size) * block_size
-
     # Split by chunks of block_size.
-    # result = {
-    #     k: [t[i : i + block_size] for i in range(0, total_length, block_size)]
-    #     for k, t in concatenated_examples.items()
-    # }
-    result = [concatenated_examples[i : i + block_size] for i in range(0, total_length, block_size)]
-
-
+    result = {
+        k: [t[i : i + block_size] for i in range(0, total_length, block_size)]
+        for k, t in concatenated_examples.items()
+    }
     result["labels"] = result["input_ids"].copy()
+    # print(result)
     return result
 
 
 def prepare_dataset(args, tokenizer):
-    cc100 = load_dataset("cc100", lang=args.languages)
+    cc100 = load_dataset("cc100", lang=args.languages, split="train")
+
+    # cc100 = cc100.train_test_split(test_size=args.test_split)
 
 
     tokenized_cc100 = cc100.map(
@@ -45,15 +42,13 @@ def prepare_dataset(args, tokenizer):
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
             num_proc=6,
-            remove_columns='id'
+            remove_columns=cc100.column_names
         )
 
     dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=6)
 
     # Save preprocessed dataset to disk
     dataset.save_to_disk(f'preprocessed_cc100_{args.languages}')
-
-    return dataset
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
