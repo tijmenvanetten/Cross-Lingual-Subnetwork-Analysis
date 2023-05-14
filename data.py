@@ -2,7 +2,7 @@
 Dataset: https://huggingface.co/datasets/cc100
 Based on: https://huggingface.co/docs/transformers/main/tasks/masked_language_modeling
 """
-from datasets import load_dataset, concatenate_datasets, DatasetDict, Dataset
+from datasets import load_dataset, DatasetDict, Dataset
 import pandas as pd 
 
 def preprocess_function(examples, tokenizer):
@@ -46,7 +46,6 @@ def prepare_dataset(args, tokenizer):
         "eval": Dataset.from_pandas(pd.DataFrame(data=eval_sets)),
         }).shuffle(42)
     
-    print(cc100['train'][0])
 
     tokenized_cc100 = cc100.map(
             preprocess_function,

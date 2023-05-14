@@ -15,26 +15,23 @@ def train(args, model, lm_dataset, data_collator):
         weight_decay=0.01,
         push_to_hub=False,
         save_total_limit = 2,
-        save_strategy = "no",
-        load_best_model_at_end=False
+        save_strategy = "epoch",
+        load_best_model_at_end=True
     )
 
     trainer = Trainer(
         model=model,
         args=training_args,
-        callbacks=EarlyStoppingCallback(early_stopping_threshold=args.threshold, early_stopping_patience=args.patience),
+        callbacks=[EarlyStoppingCallback(early_stopping_threshold=args.threshold, early_stopping_patience=args.patience)],
         train_dataset=lm_dataset["train"],
         eval_dataset=lm_dataset["eval"],
-        data_collator=data_collator
+        data_collator=data_collator,
     )
     print(f'Started actual training.', flush=True)
     trainer.train()
     print(f'Finished training and start evaluating evaluation set', flush=True)
     eval_results = trainer.evaluate()
     print(eval_results, flush=True)
-    print(f'Finished evaluating and start evaluating on test set', flush=True)
-    test_results = trainer.predict()
-    print(test_results, flush=True)
 
 
 if __name__ == '__main__':
