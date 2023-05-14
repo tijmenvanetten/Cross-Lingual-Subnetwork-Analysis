@@ -2,7 +2,8 @@
 Dataset: https://huggingface.co/datasets/cc100
 Based on: https://huggingface.co/docs/transformers/main/tasks/masked_language_modeling
 """
-from datasets import load_dataset, concatenate_datasets, DatasetDict
+from datasets import load_dataset, concatenate_datasets, DatasetDict, Dataset
+import pandas as pd 
 
 def preprocess_function(examples, tokenizer):
     # return tokenizer([" ".join(x) for x in examples["text"]])
@@ -32,20 +33,20 @@ def prepare_dataset(args, tokenizer):
     if isinstance(languages, str):
         languages = [languages]
     
-    cc100_langs = []
+    num_samples = args.train_samples + args.eval_samples
+    train_sets, eval_sets = [], []
     for lang in languages:
-        cc100_lang = load_dataset("cc100", lang=lang, split="train").shuffle(seed=42).select(range(args.num_samples))
-        cc100_langs.append(cc100_lang)
-
-    cc100 = concatenate_datasets(cc100_langs)
-    train_testvalid = cc100.train_test_split(test_size=1-args.train_split)
-    # split the testalid in half test, half valid
-    test_valid = train_testvalid["test"].train_test_split(test_size=0.5)
+        samples = list(load_dataset("cc100", lang=lang, split="train", streaming=True).take(num_samples))
+        
+        train_sets += samples[:args.train_samples]
+        eval_sets += samples[:args.eval_samples]
 
     cc100 = DatasetDict({
-        "train": train_testvalid["train"],
-        "eval": test_valid["train"],
-        "test": test_valid["test"]})
+        "train": Dataset.from_pandas(pd.DataFrame(data=train_sets)),
+        "eval": Dataset.from_pandas(pd.DataFrame(data=eval_sets)),
+        }).shuffle(42)
+    
+    print(cc100['train'][0])
 
     tokenized_cc100 = cc100.map(
             preprocess_function,
@@ -58,4 +59,3 @@ def prepare_dataset(args, tokenizer):
     dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=6)
 
     return dataset
-
