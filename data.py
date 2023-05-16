@@ -2,10 +2,12 @@
 Dataset: https://huggingface.co/datasets/cc100
 Based on: https://huggingface.co/docs/transformers/main/tasks/masked_language_modeling
 """
-from datasets import load_dataset
+import pandas as pd
+from datasets import Dataset, DatasetDict, load_dataset
 
 
 def preprocess_function(examples, tokenizer):
+    # return tokenizer([" ".join(x) for x in examples["text"]])
     return tokenizer(examples['text'])
 
 def group_texts(examples):
@@ -24,28 +26,36 @@ def group_texts(examples):
         for k, t in concatenated_examples.items()
     }
     result["labels"] = result["input_ids"].copy()
-    # print(result)
+
     return result
 
 def prepare_dataset(args, tokenizer):
-    cc100 = load_dataset("cc100", lang=args.languages, split="train")
+    languages = args.languages
+    if isinstance(languages, str):
+        languages = [languages]
+    
+    num_samples = args.train_samples + args.eval_samples
+    train_sets, eval_sets = [], []
+    for lang in languages:
+        samples = list(load_dataset("cc100", lang=lang, split="train", streaming=True).take(num_samples))
+        
+        train_sets += samples[:args.train_samples]
+        eval_sets += samples[:args.eval_samples]
 
-    # cc100 = cc100.select(range(int(len(cc100)*0.001)))
-
-    cc100 = cc100.train_test_split(test_size=args.test_split)
-
+    cc100 = DatasetDict({
+        "train": Dataset.from_pandas(pd.DataFrame(data=train_sets)),
+        "eval": Dataset.from_pandas(pd.DataFrame(data=eval_sets)),
+        }).shuffle(42)
+    
 
     tokenized_cc100 = cc100.map(
             preprocess_function,
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
-            num_proc=8,
+            num_proc=6,
             remove_columns=cc100['train'].column_names
         )
 
-    dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=8)
-
-    # Save preprocessed dataset to disk
-    dataset.save_to_disk('preprocessed_cc100_nl')
+    dataset = tokenized_cc100.map(group_texts, batched=True, num_proc=6)
 
     return dataset

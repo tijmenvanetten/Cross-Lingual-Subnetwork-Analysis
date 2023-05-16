@@ -163,3 +163,4 @@ cython_debug/
 #.idea/
 
 preprocessed_cc100_*
+masks

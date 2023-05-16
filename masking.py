@@ -5,16 +5,6 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-# logger = logging.getLogger(__name__)
-# logging.getLogger("experiment_impact_tracker.compute_tracker.ImpactTracker").disabled = True
-
-def compute_metrics(preds, labels):
-    """ Compute perplexity of a distribution """
-    logp = torch.log(preds)
-    logp = logp[labels != -100]
-    nll = -logp.sum()
-    return nll
-
 
 def entropy(p):
     """ Compute the entropy of a probability distribution """
@@ -55,6 +45,10 @@ def compute_heads_importance(
     preds = None
     labels = None
     tot_tokens = 0.0
+    accuracy_sum = 0.0
+    # nlls = []
+    total_count = 0
+
     print("***** Running evaluation *****")
     for step, batch in enumerate(tqdm(eval_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])):
         batch = batch.to(args.device)
@@ -84,64 +78,40 @@ def compute_heads_importance(
             head_importance += head_mask.grad.abs().detach()
             head_mask.grad.zero_()
 
-        # Also store our logits/labels if we want to compute metrics afterwards
-        if preds is None:
-            preds = logits.detach().cpu().numpy()
-            labels = label_ids.detach().cpu().numpy()
-        else:
-            preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
-            labels = np.append(labels, label_ids.detach().cpu().numpy(), axis=0)
+        # nlls.append(loss)
 
+        true_preds = (torch.argmax(logits, -1) == label_ids) * (label_ids != -100)
+        # print(true_preds.sum() / (label_ids != -100).sum())
+        accuracy_sum += true_preds.sum() / (label_ids != -100).sum()
+        total_count += 1
+            
         tot_tokens += input_mask.float().detach().sum().data
 
-    if compute_entropy:
-        # Normalize
-        attn_entropy /= tot_tokens
-        np.save(os.path.join(args.output_dir, "attn_entropy.npy"), attn_entropy.detach().cpu().numpy())
-        print("Attention entropies")
-        print_2d_tensor(attn_entropy)
-    if compute_importance:
-        # Normalize
-        head_importance /= tot_tokens
-        # Layerwise importance normalization
-        if not args.dont_normalize_importance_by_layer:
-            exponent = 2
-            norm_by_layer = torch.pow(torch.pow(head_importance, exponent).sum(-1), 1 / exponent)
-            head_importance /= norm_by_layer.unsqueeze(-1) + 1e-20
+    # metric = torch.exp(torch.stack(nlls).mean())
 
-        if not args.dont_normalize_global_importance:
-            head_importance = (head_importance - head_importance.min()) / (head_importance.max() - head_importance.min())
+    metric = accuracy_sum / total_count
+    print(metric)
 
-        # Print/save matrices
-        np.save(os.path.join(args.output_dir, "head_importance.npy"), head_importance.detach().cpu().numpy())
+    return attn_entropy, head_importance, metric
 
-        print("Head importance scores")
-        print_2d_tensor(head_importance)
-        print("Head ranked by importance scores")
-        head_ranks = torch.zeros(head_importance.numel(), dtype=torch.long, device=args.device)
-        head_ranks[head_importance.view(-1).sort(descending=True)[1]] = torch.arange(
-            head_importance.numel(), device=args.device
-        )
-        head_ranks = head_ranks.view_as(head_importance)
-        print_2d_tensor(head_ranks)
-
-    return attn_entropy, head_importance, preds, labels
-
+# def compute_perplexity()
 
 def mask_heads(args, model, eval_dataloader):
     """ This method shows how to mask head (set some heads to zero), to test the effect on the network,
         based on the head importance scores, as described in Michel et al. (http://arxiv.org/abs/1905.10650)
     """
-    _, head_importance, preds, labels = compute_heads_importance(args, model, eval_dataloader, compute_entropy=False)
-    preds = np.argmax(preds, axis=1) if args.output_mode == "classification" else np.squeeze(preds)
-    original_score = compute_metrics(preds, labels)
-    print("Pruning: original score: %f, threshold: %f", original_score, original_score * args.masking_threshold)
+    _, head_importance, original_score = compute_heads_importance(args, model, eval_dataloader, compute_entropy=False)
+
+    # original_score = compute_perplexity(preds, labels)
+    print(f"Pruning: original score: {original_score}, threshold: {original_score * args.masking_threshold}")
 
     new_head_mask = torch.ones_like(head_importance)
     num_to_mask = max(1, int(new_head_mask.numel() * args.masking_amount))
 
-    current_score = original_score
+    # Copy original score
+    current_score = original_score.copy_(original_score)
     i = 0
+    # Change this when using perplexity
     while current_score >= original_score * args.masking_threshold:            
         head_mask = new_head_mask.clone()  # save current head mask
         if args.save_mask_all_iterations:
@@ -168,30 +138,26 @@ def mask_heads(args, model, eval_dataloader):
         if not selected_heads_to_mask:
             break
 
-        print("Heads to mask: %s", str(selected_heads_to_mask))
+        print(f"Heads to mask: {str(selected_heads_to_mask)}")
         
         #new_head_mask = new_head_mask.view_as(head_mask)
         print_2d_tensor(new_head_mask)
 
         # Compute metric and head importance again
-        _, head_importance, preds, labels = compute_heads_importance(
+        _, head_importance, current_score = compute_heads_importance(
             args, model, eval_dataloader, compute_entropy=False, head_mask=new_head_mask
         )
-        preds = np.argmax(preds, axis=1) if args.output_mode == "classification" else np.squeeze(preds)
-        current_score = compute_metrics(preds, labels)
+        
         print(
-            "Masking: current score: %f, remaning heads %d (%.1f percents)",
-            current_score,
-            new_head_mask.sum(),
-            new_head_mask.sum() / new_head_mask.numel() * 100,
+            f"Masking: current score: {current_score}, remaning heads {new_head_mask.sum()} ({new_head_mask.sum() / new_head_mask.numel() * 100} percents)"
         )
         
 
     print("Final head mask")
-    print_2d_tensor(head_mask)
-    np.save(os.path.join(args.output_dir, "head_mask.npy"), head_mask.detach().cpu().numpy())
+    print_2d_tensor(new_head_mask)
+    np.save(os.path.join(args.output_dir, "head_mask.npy"), new_head_mask.detach().cpu().numpy())
 
-    return head_mask
+    return new_head_mask
 
 
 def prune_heads(args, model, eval_dataloader, head_mask):
@@ -201,11 +167,11 @@ def prune_heads(args, model, eval_dataloader, head_mask):
     # Try pruning and test time speedup
     # Pruning is like masking but we actually remove the masked weights
     before_time = datetime.now()
-    _, _, preds, labels = compute_heads_importance(
+    _, head_importance, original_score = compute_heads_importance(
         args, model, eval_dataloader, compute_entropy=False, compute_importance=False, head_mask=head_mask
     )
-    preds = np.argmax(preds, axis=1) if args.output_mode == "classification" else np.squeeze(preds)
-    score_masking = compute_metrics(preds, labels)
+    # preds = torch.argmax(preds, axis=-1) if args.output_mode == "classification" else np.squeeze(preds)
+    score_masking = original_score
     original_time = datetime.now() - before_time
 
     original_num_params = sum(p.numel() for p in model.parameters())
@@ -219,18 +185,13 @@ def prune_heads(args, model, eval_dataloader, head_mask):
     pruned_num_params = sum(p.numel() for p in model.parameters())
 
     before_time = datetime.now()
-    _, _, preds, labels = compute_heads_importance(
+    _, head_importance, original_score = compute_heads_importance(
         args, model, eval_dataloader, compute_entropy=False, compute_importance=False, head_mask=None
     )
-    preds = np.argmax(preds, axis=1) if args.output_mode == "classification" else np.squeeze(preds)
-    score_pruning = compute_metrics(preds, labels)
+    # preds = torch.argmax(preds, axis=-1) if args.output_mode == "classification" else np.squeeze(preds)
+    score_pruning = original_score
     new_time = datetime.now() - before_time
 
     print(
-        "Pruning: original num of params: %.2e, after pruning %.2e (%.1f percents)",
-        original_num_params,
-        pruned_num_params,
-        pruned_num_params / original_num_params * 100,
+        f"Pruning: original num of params: {original_num_params:.2e}, after pruning {pruned_num_params:.2e} ({pruned_num_params / original_num_params * 100:.1f} percents)"
     )
-    print("Pruning: score with masking: %f score with pruning: %f", score_masking, score_pruning)
-    print("Pruning: speed ratio (new timing / original timing): %f percents", original_time / new_time * 100)

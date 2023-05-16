@@ -3,12 +3,11 @@ import random
 
 import numpy as np
 import torch
-from datasets import load_from_disk
 from transformers import (AutoModelForMaskedLM, AutoTokenizer,
                           DataCollatorForLanguageModeling, Trainer,
                           TrainingArguments)
 
-from data import prepare_dataset
+from data2 import prepare_dataset
 from masking import compute_heads_importance, mask_heads, prune_heads
 
 
@@ -42,28 +41,20 @@ def prune(args, model, lm_dataset, data_collator):
         model=model,
         args=training_args,
         train_dataset=lm_dataset['train'],
-        eval_dataset=lm_dataset['test'],
+        eval_dataset=lm_dataset['eval'],
         data_collator=data_collator
     )
 
     print("Getting eval dataloader...")
     eval_dataloader = trainer.get_eval_dataloader()
 
-    # Print one example batch from dataloader
-    for batch in eval_dataloader:
-        print(batch)
-        
-        print('--------------')
-        for t in batch:
-            print(t)
-        break
-
-
     # Try head masking (set heads to zero until the score goes under a threshole)
     # and head pruning (remove masked heads and see the effect on the network)
     if args.try_masking and args.masking_threshold > 0.0 and args.masking_threshold < 1.0:
         head_mask = mask_heads(args, model, eval_dataloader)
-        prune_heads(args, model, eval_dataloader, head_mask)
+        # Save head_mask as .npy file
+        np.save(f'masks/head_mask_{args.languages}.npy', head_mask)
+        # prune_heads(args, model, eval_dataloader, head_mask)
     else:
         #Compute head entropy and importance score
         compute_heads_importance(args, model, eval_dataloader)
@@ -104,6 +95,12 @@ if __name__ == '__main__':
     )
     parser.add_argument('--data_dir', default='preprocessed_cc_100_fy', type=str,
                         help='Data directory.')
+    parser.add_argument('--save_mask_all_iterations', default=True, type=bool,
+                        help='Whether to save mask at each iteration.')
+    parser.add_argument('--train_samples', default=4000, type=int,
+                        help='Number of training samples.')
+    parser.add_argument('--eval_samples', default=1000, type=int,
+                        help='Number of test samples.')
     
     args = parser.parse_args()
     args.output_mode = 'classification'
@@ -113,10 +110,7 @@ if __name__ == '__main__':
 
     # Prepare dataset
     print("Preparing dataset...")
-    cc100_dataset = load_from_disk(args.data_dir)
-
-    # Create data split
-    cc100_dataset.train_test_split(test_size=args.test_split)
+    cc100_dataset = prepare_dataset(args, tokenizer)
 
     # Use end of sentence token as pad token
     tokenizer.pad_token = tokenizer.eos_token
