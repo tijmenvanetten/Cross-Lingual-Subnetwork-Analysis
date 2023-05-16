@@ -1,5 +1,7 @@
 import argparse
-from transformers import AutoTokenizer, AutoModelForMaskedLM, DataCollatorForLanguageModeling, Trainer, TrainingArguments
+from transformers import AutoTokenizer, AutoModelForMaskedLM, DataCollatorForLanguageModeling, Trainer, TrainingArguments, EarlyStoppingCallback
+# from datasets.utils.logging import disable_progress_bar
+# disable_progress_bar()
 
 from data import *
 
@@ -13,32 +15,40 @@ def train(args, model, lm_dataset, data_collator):
         weight_decay=0.01,
         push_to_hub=False,
         save_total_limit = 2,
-        save_strategy = "no",
-        load_best_model_at_end=False
+        save_strategy = "epoch",
+        load_best_model_at_end=True
     )
 
     trainer = Trainer(
         model=model,
         args=training_args,
+        callbacks=[EarlyStoppingCallback(early_stopping_threshold=args.threshold, early_stopping_patience=args.patience)],
         train_dataset=lm_dataset["train"],
-        eval_dataset=lm_dataset["test"],
-        data_collator=data_collator
+        eval_dataset=lm_dataset["eval"],
+        data_collator=data_collator,
     )
-
+    print(f'Started actual training.', flush=True)
     trainer.train()
-
+    print(f'Finished training and start evaluating evaluation set', flush=True)
     eval_results = trainer.evaluate()
-    print(eval_results)
+    print(eval_results, flush=True)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('--languages', default='nl', type=str,
+    parser.add_argument('--languages', nargs="*", default=['en', 'nl', 'fy', 'he', 'ar', 'hi', 'ur'],
                         help='Language to finetune on.')
     parser.add_argument('--model', default="xlm-roberta-base", type=str,
                        help='Pretrained model to use.')
-    parser.add_argument('--test_split', default=0.2, type=float, choices=range(0,1),
-                        help='Which percentage of the data to use for testing')
+    parser.add_argument('--train_samples', default=5000, type=int,
+                       help='Number of training samples per language')
+    parser.add_argument('--eval_samples', default=5000, type=int,
+                       help='Number of evaluation samples per language')
+    parser.add_argument('--patience', default=3, type=int,
+                       help='Number of epochs to wait before early stopping')
+    parser.add_argument('--threshold', default=0.1, type=float,
+                       help='Specify how much performance metric must improve before early stopping')
     
     args = parser.parse_args()
 
@@ -46,8 +56,9 @@ if __name__ == '__main__':
     model = AutoModelForMaskedLM.from_pretrained(args.model)
 
     # Prepare dataset
+    print(f'Started data preprocessing...', flush=True)
     cc100_dataset = prepare_dataset(args, tokenizer)
-
+    print(f'Finished data preprocessing.', flush=True)
     # Use end of sentence token as pad token
     tokenizer.pad_token = tokenizer.eos_token
 

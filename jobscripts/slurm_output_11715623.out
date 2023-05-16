@@ -55,3 +55,23 @@ Traceback (most recent call last):
 NameError: name 'tokenizer' is not defined
 srun: error: r29n2: task 0: Exited with exit code 1
 adding, committing, and pushing results to remote dir...
+[main 30a2a59] save results from run (automated commit from Lisa).
+ Committer: Sabijn Perdijk <lcur1135@test3.irc.sara.nl.irc.sara.nl>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 2 files changed, 77 insertions(+)
+ create mode 100644 jobscripts/slurm_output_11715623.out
+remote: Resolving deltas:   0% (0/1)        remote: Resolving deltas: 100% (1/1)        remote: Resolving deltas: 100% (1/1), completed with 1 local object.        
+To github.com:tijmenvanetten/atcs-t1-p2.git
+   f7254e8..30a2a59  main -> main
+done.
