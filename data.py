@@ -2,9 +2,9 @@
 Dataset: https://huggingface.co/datasets/cc100
 Based on: https://huggingface.co/docs/transformers/main/tasks/masked_language_modeling
 """
+
 import pandas as pd
 from datasets import Dataset, DatasetDict, load_dataset
-
 
 def preprocess_function(examples, tokenizer):
     # return tokenizer([" ".join(x) for x in examples["text"]])
