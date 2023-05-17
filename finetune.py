@@ -70,5 +70,5 @@ if __name__ == '__main__':
 
     print(cc100_dataset['train'][0])
     # Training
-    # train(args, model, cc100_dataset, data_collator)
+    train(args, model, cc100_dataset, data_collator)
 
