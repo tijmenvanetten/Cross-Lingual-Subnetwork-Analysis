@@ -5,7 +5,7 @@
 #SBATCH --job-name=atcstrain
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --time=04:00:00
+#SBATCH --time=10:00:00
 #SBATCH --mem=32000M
 #SBATCH --output=slurm_output_%A.out
 
@@ -17,16 +17,16 @@ module load Miniconda3/4.12.0
 echo activating virtual env...
 source activate atcs2023
 
-echo fetching and pulling latest changes from remote dir...
-cd $HOME/repos/atcs-t1-p2/
-git fetch && git pull
+# echo fetching and pulling latest changes from remote dir...
+# cd $HOME/repos/atcs-t1-p2/
+# git fetch && git pull
 
 echo running torch train file...
-srun python train.py
+srun /home/lcur1113/.conda/envs/atcs2023/bin/python finetune.py
 
-echo adding, committing, and pushing results to remote dir...
-git add $HOME/repos/atcs-t1-p2/
-git commit -m "save results from run (automated commit from Lisa)."
-git push
+# echo adding, committing, and pushing results to remote dir...
+# git add $HOME/repos/atcs-t1-p2/
+# git commit -m "save results from run (automated commit from Lisa)."
+# git push
 
 echo done.
