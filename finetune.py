@@ -27,15 +27,20 @@ def train(args, model, lm_dataset, data_collator):
         eval_dataset=lm_dataset["eval"],
         data_collator=data_collator,
     )
-    print(f'Evaluating pre-trained model:',)
-    eval_results = trainer.evaluate()
-    print(eval_results)
-    print(f'Starting fine-tuning.',)
-    trainer.train()
-    print(f'Evaluating fine-tuned model',)
+
+    print(f'Evaluating pre-trained model...',)
     eval_results = trainer.evaluate()
     print(eval_results)
 
+    print(f'Starting fine-tuning...',)
+    trainer.train()
+
+    print(f'Evaluating fine-tuned model...',)
+    eval_results = trainer.evaluate()
+    print(eval_results)
+
+    print(f'Saving fine-tuned model...',)
+    trainer.save_model()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -60,7 +65,7 @@ if __name__ == '__main__':
 
     # Prepare dataset
     print(f'Started data preprocessing...', flush=True)
-    cc100_dataset = prepare_dataset(args, tokenizer)
+    cc100_lm_dataset = prepare_lm_dataset(args, tokenizer)
     print(f'Finished data preprocessing.', flush=True)
     # Use end of sentence token as pad token
     tokenizer.pad_token = tokenizer.eos_token
@@ -68,7 +73,6 @@ if __name__ == '__main__':
     # Padding and batching
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
 
-    print(cc100_dataset['train'][0])
     # Training
-    train(args, model, cc100_dataset, data_collator)
+    train(args, model, cc100_lm_dataset, data_collator)
 
