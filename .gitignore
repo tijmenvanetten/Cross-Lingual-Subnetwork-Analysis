@@ -166,4 +166,4 @@ masks
 jobscripts/train.job
 
 logs/
-
+events*
