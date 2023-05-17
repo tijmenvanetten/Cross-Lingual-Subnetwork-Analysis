@@ -7,7 +7,7 @@ from data import *
 
 def train(args, model, lm_dataset, data_collator):
     training_args = TrainingArguments(
-        output_dir=f"results_{args.languages}",
+        output_dir=f"logs/results_{args.languages}",
         overwrite_output_dir = 'True',
         evaluation_strategy="epoch",
         learning_rate=2e-5,
@@ -27,11 +27,14 @@ def train(args, model, lm_dataset, data_collator):
         eval_dataset=lm_dataset["eval"],
         data_collator=data_collator,
     )
-    print(f'Started actual training.', flush=True)
-    trainer.train()
-    print(f'Finished training and start evaluating evaluation set', flush=True)
+    print(f'Evaluating pre-trained model:',)
     eval_results = trainer.evaluate()
-    print(eval_results, flush=True)
+    print(eval_results)
+    print(f'Starting fine-tuning.',)
+    trainer.train()
+    print(f'Evaluating fine-tuned model',)
+    eval_results = trainer.evaluate()
+    print(eval_results)
 
 
 if __name__ == '__main__':
@@ -65,6 +68,7 @@ if __name__ == '__main__':
     # Padding and batching
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
 
+    print(cc100_dataset['train'][0])
     # Training
-    train(args, model, cc100_dataset, data_collator)
+    # train(args, model, cc100_dataset, data_collator)
 
