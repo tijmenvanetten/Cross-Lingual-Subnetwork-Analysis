@@ -167,3 +167,4 @@ jobscripts/train.job
 
 logs/
 events*
+*.out
