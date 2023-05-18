@@ -36,6 +36,7 @@ def prepare_dataset(args, tokenizer):
             preprocess_function,
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
+            batch_size=10000,
             num_proc=6,
             remove_columns=cc100['train'].column_names
         )
