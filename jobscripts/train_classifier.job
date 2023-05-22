@@ -21,8 +21,11 @@ source activate atcs2023
 # cd $HOME/repos/atcs-t1-p2/
 # git fetch && git pull
 
-echo running train_classifier file...
-srun /home/lcur1113/.conda/envs/atcs2023/bin/python train_classifier.py
+echo running train_classifier file for word order...
+srun /home/lcur1113/.conda/envs/atcs2023/bin/python train_classifier.py --feature=word_order
+
+echo running train_classifier file for writing system...
+srun /home/lcur1113/.conda/envs/atcs2023/bin/python train_classifier.py --feature=writing_system
 
 # echo adding, committing, and pushing results to remote dir...
 # git add $HOME/repos/atcs-t1-p2/
