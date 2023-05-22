@@ -53,7 +53,7 @@ def prepare_lm_dataset(args, tokenizer):
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
             num_proc=6,
-            remove_columns=['id', 'text']
+            remove_columns=['id', 'text', 'attention_mask']
         )
 
     dataset = tokenized_cc100.map(
@@ -107,11 +107,13 @@ def prepare_typology_dataset(args, tokenizer):
     eval_langs = [args.eval_langs] if isinstance(args.eval_langs, str) else args.eval_langs
 
     train_sets = collect_langs(train_langs, args.train_samples, args.feature)
-    eval_sets = collect_langs(eval_langs, args.eval_samples, args.feature)
+    eval_sets = collect_langs(eval_langs, args.eval_samples + args.test_samples, args.feature)
 
+    eval_sets, test_sets = eval_sets[:args.eval_samples], eval_sets[args.eval_samples:]
     cc100 = DatasetDict({
         "train": Dataset.from_pandas(pd.DataFrame(data=train_sets)),
         "eval": Dataset.from_pandas(pd.DataFrame(data=eval_sets)),
+        "test": Dataset.from_pandas(pd.DataFrame(data=test_sets)),
         }).shuffle(42)
     
     tokenized_cc100 = cc100.map(

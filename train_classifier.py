@@ -5,12 +5,22 @@ from transformers import AutoModel
 # disable_progress_bar()
 from models import ProbingClassifier, ProbingModel
 import torch 
+import evaluate
+import numpy as np
 
 from data import *
 
-def train_classifier(args, model, dataset, data_collator):
+# Setup evaluation 
+metric = evaluate.load("accuracy", "f1")
+
+def compute_metrics(eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    return metric.compute(predictions=predictions, references=labels)
+
+def train_classifier(args, model, dataset, data_collator, skip_train=False):
     training_args = TrainingArguments(
-        output_dir=f"logs/results_classifier",
+        output_dir=f"logs/results_classifier_{args.feature}",
         overwrite_output_dir = 'True',
         evaluation_strategy="epoch",
         learning_rate=1e-3,
@@ -29,12 +39,13 @@ def train_classifier(args, model, dataset, data_collator):
         train_dataset=dataset["train"],
         eval_dataset=dataset["eval"],
         data_collator=data_collator,
+        compute_metrics=compute_metrics
     )
 
     print(f'Starting training.',)
     trainer.train()
     print(f'Evaluating trained classifier',)
-    eval_results = trainer.evaluate()
+    eval_results = trainer.evaluate(eval_dataset=dataset["test"])
     print(eval_results)
 
     print("Saving model...")
@@ -48,7 +59,7 @@ if __name__ == '__main__':
                         help='Language to finetune on.')
     parser.add_argument('--eval_langs', nargs="*", default=['fy', 'ar', 'ur'],
                         help='Language to finetune on.')
-    parser.add_argument('--feature', default="word_order", type=str,
+    parser.add_argument('--feature', default="writing_system", type=str,
                        help='Typological feature to classify: word_order, writing_system')     
     parser.add_argument('--num_classes', default=3, type=int,
                        help='Number of classes of typological feature to classify')               
@@ -60,7 +71,9 @@ if __name__ == '__main__':
                        help='Pretrained encoder to use.')
     parser.add_argument('--train_samples', default=5000, type=int,
                        help='Number of training samples per language')
-    parser.add_argument('--eval_samples', default=5000, type=int,
+    parser.add_argument('--eval_samples', default=1000, type=int,
+                       help='Number of evaluation samples per language')
+    parser.add_argument('--test_samples', default=5000, type=int,
                        help='Number of evaluation samples per language')
     parser.add_argument('--patience', default=3, type=int,
                        help='Number of epochs to wait before early stopping')
@@ -70,7 +83,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    print(tokenizer.model_max_length)
+
+    print(f'Initializing model...', flush=True)
+    # Load Encoder from finetuned model
+    model = AutoModelForSequenceClassification.from_pretrained(args.checkpoint, num_labels=3)
+    # freeze encoder
+    for param in model.base_model.parameters():
+        param.requires_grad = False
+
+    print(model)
 
     # Prepare dataset
     print(f'Starting data preprocessing...', flush=True)
@@ -81,11 +102,6 @@ if __name__ == '__main__':
 
     # Padding and batching
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
-
-    print(f'Initializing model...', flush=True)
-    # Load Encoder from finetuned model
-    model = AutoModelForSequenceClassification.from_pretrained(args.checkpoint, num_labels=3)
-    print(model)
 
     # # Initialize classifier layer
     # classifier = ProbingClassifier(in_features=encoder_dim, hidden_dim=args.hidden_dim, output_dim=args.num_classes)
