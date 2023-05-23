@@ -160,6 +160,20 @@ def mask_heads(args, model, eval_dataloader):
     return new_head_mask
 
 
+def prune_model(args, model)
+    head_mask = torch.from_numpy(np.load(args.mask))
+
+    heads_to_prune = {}
+    for layer in range(len(head_mask)):
+        heads_to_mask = [h[0] for h in (1 - head_mask[layer].long()).nonzero().tolist()]
+        heads_to_prune[layer] = heads_to_mask
+    assert sum(len(h) for h in heads_to_prune.values()) == (1 - head_mask.long()).sum().item()
+    print(f"{heads_to_prune}")
+
+    model.prune_heads(heads_to_prune)
+
+    return model
+
 def prune_heads(args, model, eval_dataloader, head_mask):
     """ This method shows how to prune head (remove heads weights) based on
         the head importance scores as described in Michel et al. (http://arxiv.org/abs/1905.10650)

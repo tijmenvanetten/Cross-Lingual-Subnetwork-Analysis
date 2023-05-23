@@ -1,14 +1,18 @@
 import argparse
-from transformers import AutoTokenizer, AutoModelForMaskedLM,  AutoModelForSequenceClassification, DataCollatorWithPadding, Trainer, TrainingArguments, EarlyStoppingCallback
-from transformers import AutoModel
+
+import evaluate
+import numpy as np
+import torch
+from transformers import (AutoModel, AutoModelForMaskedLM,
+                          AutoModelForSequenceClassification, AutoTokenizer,
+                          DataCollatorWithPadding, EarlyStoppingCallback,
+                          Trainer, TrainingArguments)
+
+from data import *
+from masking import prune_model
 # from datasets.utils.logging import disable_progress_bar
 # disable_progress_bar()
 from models import ProbingClassifier, ProbingModel
-import torch 
-import evaluate
-import numpy as np
-
-from data import *
 
 # Setup evaluation 
 metric = evaluate.load("accuracy", "f1")
@@ -79,6 +83,8 @@ if __name__ == '__main__':
                        help='Number of epochs to wait before early stopping')
     parser.add_argument('--threshold', default=0.1, type=float,
                        help='Specify how much performance metric must improve before early stopping')
+    parser.add_argument('--mask', default=None, type=str,
+                        help='Mask to use for training')
     
     args = parser.parse_args()
 
@@ -87,6 +93,9 @@ if __name__ == '__main__':
     print(f'Initializing model...', flush=True)
     # Load fine-tuned model into model for sequence classification
     model = AutoModelForSequenceClassification.from_pretrained(args.checkpoint, num_labels=3)
+
+    if args.mask:
+        model = prune_model(args, model)
 
     # freeze encoder
     for param in model.base_model.parameters():
