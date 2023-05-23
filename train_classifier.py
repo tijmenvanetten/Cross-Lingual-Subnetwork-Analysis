@@ -69,11 +69,11 @@ if __name__ == '__main__':
                        help='Pretrained model tokenizer to use.')
     parser.add_argument('--checkpoint', default="logs/results_['en', 'nl', 'fy', 'he', 'ar', 'hi', 'ur']/", type=str,
                        help='Pretrained encoder to use.')
-    parser.add_argument('--train_samples', default=5000, type=int,
+    parser.add_argument('--train_samples', default=10000, type=int,
                        help='Number of training samples per language')
     parser.add_argument('--eval_samples', default=1000, type=int,
                        help='Number of evaluation samples per language')
-    parser.add_argument('--test_samples', default=5000, type=int,
+    parser.add_argument('--test_samples', default=9000, type=int,
                        help='Number of evaluation samples per language')
     parser.add_argument('--patience', default=3, type=int,
                        help='Number of epochs to wait before early stopping')
@@ -85,30 +85,22 @@ if __name__ == '__main__':
     tokenizer = AutoTokenizer.from_pretrained(args.model)
 
     print(f'Initializing model...', flush=True)
-    # Load Encoder from finetuned model
+    # Load fine-tuned model into model for sequence classification
     model = AutoModelForSequenceClassification.from_pretrained(args.checkpoint, num_labels=3)
+
     # freeze encoder
     for param in model.base_model.parameters():
         param.requires_grad = False
 
-    print(model)
-
     # Prepare dataset
     print(f'Starting data preprocessing...', flush=True)
     cc100_typology_dataset = prepare_typology_dataset(args, tokenizer)
-    print(cc100_typology_dataset['train'][0])
+
     # Use end of sentence token as pad token
     tokenizer.pad_token = tokenizer.eos_token
 
     # Padding and batching
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
-
-    # # Initialize classifier layer
-    # classifier = ProbingClassifier(in_features=encoder_dim, hidden_dim=args.hidden_dim, output_dim=args.num_classes)
-
-    # # Combine into model
-    # model = ProbingModel(encoder=encoder, classifier=classifier)
-    # print(model)
     # Training
     train_classifier(args, model, cc100_typology_dataset, data_collator)
 
