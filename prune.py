@@ -25,7 +25,7 @@ def prune(args, model, lm_dataset, data_collator):
     args.device = device
 
     training_args = TrainingArguments(
-        output_dir=f'results_{args.languages}',
+        output_dir=f'logs/results_{args.languages}',
         overwrite_output_dir = 'True',
         evaluation_strategy='epoch',
         learning_rate=2e-5,
