@@ -5,6 +5,7 @@ Based on: https://huggingface.co/docs/transformers/main/tasks/masked_language_mo
 
 import pandas as pd
 from datasets import Dataset, DatasetDict, load_dataset
+import random 
 
 from language_props import lang_to_typology_dict
 
@@ -107,9 +108,12 @@ def prepare_typology_dataset(args, tokenizer):
     eval_langs = [args.eval_langs] if isinstance(args.eval_langs, str) else args.eval_langs
 
     train_sets = collect_langs(train_langs, args.train_samples, args.feature)
-    eval_sets = collect_langs(eval_langs, args.eval_samples + args.test_samples, args.feature)
+    held_out_sets = collect_langs(eval_langs, args.eval_samples + args.test_samples, args.feature)
+    random.shuffle(held_out_sets)
 
-    eval_sets, test_sets = eval_sets[:args.eval_samples], eval_sets[args.eval_samples:]
+    eval_idx = args.eval_samples * len(eval_langs)
+    eval_sets, test_sets = held_out_sets[:eval_idx], held_out_sets[eval_idx:]
+
     cc100 = DatasetDict({
         "train": Dataset.from_pandas(pd.DataFrame(data=train_sets)),
         "eval": Dataset.from_pandas(pd.DataFrame(data=eval_sets)),
@@ -120,7 +124,7 @@ def prepare_typology_dataset(args, tokenizer):
             preprocess_function_typo,
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
-            batch_size=10000,
+            batch_size=32,
             num_proc=6,
             remove_columns=['id', 'text']
         )
