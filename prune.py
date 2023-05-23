@@ -7,7 +7,7 @@ from transformers import (AutoModelForMaskedLM, AutoTokenizer,
                           DataCollatorForLanguageModeling, Trainer,
                           TrainingArguments)
 
-from data2 import prepare_dataset
+from data import prepare_dataset
 from masking import compute_heads_importance, mask_heads, prune_heads
 
 
@@ -53,7 +53,7 @@ def prune(args, model, lm_dataset, data_collator):
     if args.try_masking and args.masking_threshold > 0.0 and args.masking_threshold < 1.0:
         head_mask = mask_heads(args, model, eval_dataloader)
         # Save head_mask as .npy file
-        np.save(f'masks/head_mask_{args.languages}.npy', head_mask)
+        np.save(f'masks/head_mask_{args.languages}_{args.seed}.npy', head_mask)
         # prune_heads(args, model, eval_dataloader, head_mask)
     else:
         #Compute head entropy and importance score
