@@ -54,7 +54,7 @@ def prepare_lm_dataset(args, tokenizer):
             fn_kwargs={"tokenizer" : tokenizer},
             batched=True,
             num_proc=6,
-            remove_columns=['id', 'text', 'attention_mask']
+            remove_columns=['id', 'text']
         )
 
     dataset = tokenized_cc100.map(
