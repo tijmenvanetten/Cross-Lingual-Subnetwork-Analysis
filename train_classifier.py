@@ -44,9 +44,9 @@ def train_classifier(args, model, dataset, data_collator, skip_train=False):
 
     print(f'Starting training.',)
     trainer.train()
-    print(f'Evaluating trained classifier',)
-    eval_results = trainer.evaluate(eval_dataset=dataset["test"])
-    print(eval_results)
+    print(f'Evaluating trained classifier on test dataset',)
+    test_results = trainer.evaluate(eval_dataset=dataset["test"])
+    print(test_results)
 
     print("Saving model...")
     trainer.save_model()
