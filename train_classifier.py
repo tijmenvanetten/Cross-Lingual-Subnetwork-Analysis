@@ -11,7 +11,7 @@ from data import *
 from masking import prune_model
 # from datasets.utils.logging import disable_progress_bar
 # disable_progress_bar()
-from models import ProbingClassificationHead, ProbingModel
+from models import ProbingClassificationHead
 
 # Setup evaluation 
 import evaluate
