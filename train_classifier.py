@@ -12,6 +12,7 @@ from masking import prune_model
 # from datasets.utils.logging import disable_progress_bar
 # disable_progress_bar()
 from models import ProbingClassificationHead
+from language_props import num_labels_feature
 
 # Setup evaluation 
 import evaluate
@@ -64,9 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--eval_langs', nargs="*", default=['fy', 'ar', 'ur', 'zu', 'gd'],
                         help='Language to finetune on.')
     parser.add_argument('--feature', default="writing_system", type=str,
-                       help='Typological feature to classify: word_order, writing_system')     
-    parser.add_argument('--num_classes', default=3, type=int,
-                       help='Number of classes of typological feature to classify')               
+                       help='Typological feature to classify: word_order, writing_system')                 
     parser.add_argument('--hidden_dim', default=768, type=int,
                        help='Hidden dimension size of the classifier')
     parser.add_argument('--model', default="xlm-roberta-base", type=str,
@@ -88,13 +87,15 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
+    num_labels = num_labels_feature[args.feature]
+
     tokenizer = AutoTokenizer.from_pretrained(args.model)
 
     print(f'Initializing model...', flush=True)
     # Load fine-tuned model into model for sequence classification
-    model = XLMRobertaForSequenceClassification.from_pretrained(args.checkpoint, num_labels=3)
+    model = XLMRobertaForSequenceClassification.from_pretrained(args.checkpoint, num_labels=num_labels)
     print(model)
-    model.classifier = ProbingClassificationHead(768, 100, 0.5, 3)
+    model.classifier = ProbingClassificationHead(768, 100, 0.5, num_labels)
     print(model)
 
     if args.mask:
