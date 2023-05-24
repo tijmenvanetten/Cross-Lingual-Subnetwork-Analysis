@@ -3,8 +3,7 @@ import argparse
 import eval
 import numpy as np
 import torch
-from transformers import (AutoModel, AutoModelForMaskedLM,
-                          AutoModelForSequenceClassification, AutoTokenizer,
+from transformers import (XLMRobertaForSequenceClassification, AutoTokenizer,
                           DataCollatorWithPadding, EarlyStoppingCallback,
                           Trainer, TrainingArguments)
 
@@ -12,7 +11,7 @@ from data import *
 from masking import prune_model
 # from datasets.utils.logging import disable_progress_bar
 # disable_progress_bar()
-from models import ProbingClassifier, ProbingModel
+from models import ProbingClassificationHead, ProbingModel
 
 # Setup evaluation 
 import evaluate
@@ -60,9 +59,9 @@ def train_classifier(args, model, dataset, data_collator, skip_train=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('--train_langs', nargs="*", default=['en', 'nl', 'he', 'hi'],
+    parser.add_argument('--train_langs', nargs="*", default=['en', 'nl', 'he', 'hi', 'sw', 'cy'],
                         help='Language to finetune on.')
-    parser.add_argument('--eval_langs', nargs="*", default=['fy', 'ar', 'ur'],
+    parser.add_argument('--eval_langs', nargs="*", default=['fy', 'ar', 'ur', 'zu', 'gd'],
                         help='Language to finetune on.')
     parser.add_argument('--feature', default="writing_system", type=str,
                        help='Typological feature to classify: word_order, writing_system')     
@@ -93,7 +92,10 @@ if __name__ == '__main__':
 
     print(f'Initializing model...', flush=True)
     # Load fine-tuned model into model for sequence classification
-    model = AutoModelForSequenceClassification.from_pretrained(args.checkpoint, num_labels=3)
+    model = XLMRobertaForSequenceClassification.from_pretrained(args.checkpoint, num_labels=3)
+    print(model)
+    model.classifier = ProbingClassificationHead(768, 100, 0.5, 3)
+    print(model)
 
     if args.mask:
         model = prune_model(args, model)
