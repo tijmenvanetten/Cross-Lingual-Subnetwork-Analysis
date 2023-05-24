@@ -1,6 +1,6 @@
 import argparse
 
-import evaluate
+import eval
 import numpy as np
 import torch
 from transformers import (AutoModel, AutoModelForMaskedLM,
@@ -15,7 +15,8 @@ from masking import prune_model
 from models import ProbingClassifier, ProbingModel
 
 # Setup evaluation 
-metric = evaluate.load("accuracy", "f1")
+import evaluate
+metric = evaluate.load("accuracy")
 
 def compute_metrics(eval_pred):
     logits, labels = eval_pred

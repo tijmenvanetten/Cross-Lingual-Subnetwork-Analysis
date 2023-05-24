@@ -6,7 +6,7 @@ from data import prepare_dataset
 import os
 import numpy as np
 import torch
-from evaluate import evaluate
+from eval import evaluate
 
 def evaluate_model(model, mask, dataset, trainer):
     """Evaluate the model on the dataset."""
