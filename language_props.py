@@ -2,6 +2,7 @@ word_order_to_idx = {
     "None": 0,
     "SVO":  1,
     "SOV":  2,
+    "VSO":  3,
 }
 writing_system_to_idx = {
     "alphabetic" :  0,
