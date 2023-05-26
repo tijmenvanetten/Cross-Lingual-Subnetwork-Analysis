@@ -162,9 +162,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 preprocessed_cc100_*
-masks
 jobscripts/train.job
 
 logs/
 events*
 *.out
+notebooks/compare_masks.ipynb

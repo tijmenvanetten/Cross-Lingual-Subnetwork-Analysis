@@ -2,23 +2,23 @@ import argparse
 from transformers import (AutoModelForMaskedLM, AutoTokenizer,
                             DataCollatorForLanguageModeling, Trainer,
                             TrainingArguments)
-from data import prepare_dataset
+from data import prepare_lm_dataset
 import os
 import numpy as np
 import torch
+import evaluate
+from masking import prune_model
 from eval import evaluate
 
-def evaluate_model(model, mask, dataset, trainer):
-    """Evaluate the model on the dataset."""
-    print("Evaluating...")
-    model.set_head_mask(mask)
+metric = evaluate.load("accuracy", "f1")
 
-    # Evaluate model for both perplexity and accuracy
-    eval_results = trainer.evaluate(eval_dataset=dataset)
-    print(eval_results)
+def compute_metrics(eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    return metric.compute(predictions=predictions, references=labels)
 
 
-def cross_evaluate_models(args, tokenizer, model, data_collator):
+def cross_evaluate_models(args, tokenizer, data_collator):
     """Evaluate the model for each language specific mask on each language."""
     print("Cross evaluating...")
     
@@ -46,23 +46,29 @@ def cross_evaluate_models(args, tokenizer, model, data_collator):
     mask_dict = {lang: os.path.join(args.masks_dir, f"head_mask_{lang}.npy") for lang in languages}
 
     for mask_language in languages:
-        mask_location = mask_dict[mask_language]
-        head_mask = torch.from_numpy(np.load(mask_location))
+        model = AutoModelForMaskedLM.from_pretrained(args.model)
+        args.mask = mask_dict[mask_language]
 
+        model = prune_model(args, model)
+        
         for dataset_language in languages:
             args.languages = dataset_language
 
-            dataset = prepare_dataset(args, tokenizer)
+            dataset = prepare_lm_dataset(args, tokenizer)
             trainer = Trainer(
                 model=model,
                 args=training_args,
                 train_dataset=dataset['train'],
                 eval_dataset=dataset['eval'],
                 data_collator=data_collator,
+                compute_metrics=compute_metrics
             )
 
-            accuracy, perplexity = evaluate(args, model, trainer, head_mask=head_mask)
-            print(f"Accuracy: {accuracy}, Perplexity: {perplexity}")
+            eval_results = trainer.evaluate(eval_dataset=dataset['eval'])
+            print(eval_results)
+
+            # accuracy, perplexity = evaluate(args, model, trainer, head_mask=head_mask)
+            # print(f"Accuracy: {accuracy}, Perplexity: {perplexity}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -81,9 +87,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    model = AutoModelForMaskedLM.from_pretrained(args.model)
 
     tokenizer.pad_token = tokenizer.eos_token
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
 
-    cross_evaluate_models(args, tokenizer, model, data_collator)
+    cross_evaluate_models(args, tokenizer, data_collator)
