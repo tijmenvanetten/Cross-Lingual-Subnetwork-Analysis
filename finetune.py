@@ -45,13 +45,13 @@ def train(args, model, lm_dataset, data_collator):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('--languages', nargs="*", default=['en', 'nl', 'fy', 'he', 'ar', 'hi', 'ur'],
+    parser.add_argument('--languages', nargs="*", default=['en', 'nl', 'fy', 'he', 'ar', 'hi', 'ur', 'sw', 'zu', 'cy', 'gd'],
                         help='Language to finetune on.')
     parser.add_argument('--model', default="xlm-roberta-base", type=str,
                        help='Pretrained model to use.')
-    parser.add_argument('--train_samples', default=5000, type=int,
+    parser.add_argument('--train_samples', default=10000, type=int,
                        help='Number of training samples per language')
-    parser.add_argument('--eval_samples', default=5000, type=int,
+    parser.add_argument('--eval_samples', default=10000, type=int,
                        help='Number of evaluation samples per language')
     parser.add_argument('--patience', default=3, type=int,
                        help='Number of epochs to wait before early stopping')
