@@ -168,3 +168,4 @@ jobscripts/train.job
 logs/
 events*
 *.out
+notebooks/compare_masks.ipynb
