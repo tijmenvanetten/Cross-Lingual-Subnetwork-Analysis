@@ -7,7 +7,7 @@ from transformers import (AutoModelForMaskedLM, AutoTokenizer,
                           DataCollatorForLanguageModeling, Trainer,
                           TrainingArguments)
 
-from data import prepare_dataset
+from data import prepare_lm_dataset
 from masking import compute_heads_importance, mask_heads, prune_heads
 
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     # Prepare dataset
     print("Preparing dataset...")
-    cc100_dataset = prepare_dataset(args, tokenizer)
+    cc100_dataset = prepare_lm_dataset(args, tokenizer)
 
     # Use end of sentence token as pad token
     tokenizer.pad_token = tokenizer.eos_token
