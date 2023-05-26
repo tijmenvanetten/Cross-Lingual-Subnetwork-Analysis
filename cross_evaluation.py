@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import evaluate
 from masking import prune_model
+from eval import evaluate
 
 metric = evaluate.load("accuracy", "f1")
 
