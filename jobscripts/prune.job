@@ -1,0 +1,45 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu_titanrtx_shared_course
+#SBATCH --gres=gpu:1
+#SBATCH --job-name=atcstrain
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=3
+#SBATCH --time=4:00:00
+#SBATCH --mem=32000M
+#SBATCH --output=slurm_output_%A.out
+
+echo loading Lisa modules...
+module purge
+module load 2022
+module load Miniconda3/4.12.0
+
+# list all environments
+# source info --envs
+# source remove transformers
+# pip uninstall transformers
+# pip install transformers
+# # upgrade transformers
+# pip install --upgrade transformers
+# pip install datasets
+
+# echo fetching and pulling latest changes from remote dir...
+cd $HOME/atcs-project/atcs_luc
+# git fetch && git pull
+
+echo activating virtual env...
+source activate atcs-project2
+# echo installing transformers...
+# pip install transformers
+
+for lang in en nl fy he ar hi ur sw zu cy gd
+do
+    for seed in 1 2 3
+    do
+        echo finding masks for $lang with seed $seed
+        # srun /home/lcur1145/.conda/envs/dl2022/bin/python prune_lisa.py --language $lang --seed $seed
+        srun python prune_lisa.py --language $lang --seed $seed --model 'finetuned_model_final' --eval_samples 5000
+    done
+done
+
+echo done
