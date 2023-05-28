@@ -16,7 +16,7 @@ def evaluate_model(args, model, trainer):
 
         # Do a forward pass (not with torch.no_grad() since we need gradients for importance score - see below)
         outputs = model(
-            input_ids, attention_mask=input_mask, labels=label_ids
+            input_ids, attention_mask=input_mask, labels=label_ids, head_mask=None
         )
         loss, logits, all_attentions = (
             outputs[0],
