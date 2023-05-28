@@ -37,27 +37,22 @@ def cross_evaluate_models(args, model, tokenizer, data_collator):
         args.mask = os.path.join(args.masks_dir, f"average_mask_{args.mask_language}.npy")
         model = prune_model(args, model)
     
-    for dataset_language in args.eval_languages:
-        print(f"Evaluating {args.mask_language} on {dataset_language}...")
-        args.languages = dataset_language
+    print(f"Evaluating {args.mask_language} on {args.languages}...")
 
-        dataset = prepare_lm_dataset(args, tokenizer)
-        trainer = Trainer(
-            model=model,
-            args=training_args,
-            train_dataset=dataset['train'],
-            eval_dataset=dataset['eval'],
-            data_collator=data_collator
-        )
+    dataset = prepare_lm_dataset(args, tokenizer)
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=dataset['train'],
+        eval_dataset=dataset['eval'],
+        data_collator=data_collator
+    )
 
-        # eval_results = trainer.evaluate(eval_dataset=dataset['eval'])
-        # print(eval_results)
+    accuracy, perplexity = evaluate_model(args, model, trainer)
+    print(f"Accuracy: {accuracy}, Perplexity: {perplexity}")
 
-        accuracy, perplexity = evaluate_model(args, model, trainer)
-        print(f"Accuracy: {accuracy}, Perplexity: {perplexity}")
-
-        with open(f"results_cross/{args.mask_language}_{dataset_language}.json", 'w') as f:
-            json.dump({"accuracy": accuracy.item(), "perplexity": perplexity.item()}, f)
+    with open(f"results_cross/{args.mask_language}_{args.languages}.json", 'w') as f:
+        json.dump({"accuracy": accuracy.item(), "perplexity": perplexity.item()}, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -75,7 +70,7 @@ if __name__ == "__main__":
                         help='Number of test samples.')
     parser.add_argument('--mask_language', default='en', type=str,
                         help='Language to mask.')
-    parser.add_argument('--eval_languages', nargs="*", default=['en', 'nl', 'fy', 'he', 'ar', 'hi', 'ur', 'sw', 'zu', 'cy', 'gd'],
+    parser.add_argument('--languages', nargs="*", default='en', type=str
                         help='Languages to evaluate on.')
     args = parser.parse_args()
 
