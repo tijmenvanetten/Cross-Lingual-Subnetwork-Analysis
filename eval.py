@@ -25,7 +25,7 @@ def evaluate_model(args, model, trainer):
             outputs[1],
             outputs[-1],
         )
-        losses.append(loss.item())
+        losses.append(loss)
         true_preds = (torch.argmax(logits, -1) == label_ids) * (label_ids != -100)
         accuracy_sum += true_preds.sum() / (label_ids != -100).sum()
         total_count += 1
