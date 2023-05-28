@@ -19,6 +19,6 @@ cd $HOME/atcs-project/Cross-Lingual-Subnetwork-Analysis
 echo activating virtual env...
 source activate atcs-project2
 
-srun python cross_evaluate.py
+srun python cross_evaluation.py
 
 echo done
