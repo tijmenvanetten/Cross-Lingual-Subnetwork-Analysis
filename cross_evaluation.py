@@ -1,21 +1,17 @@
 import argparse
-from transformers import (AutoModelForMaskedLM, AutoTokenizer,
-                            DataCollatorForLanguageModeling, Trainer,
-                            TrainingArguments)
-from data import prepare_lm_dataset
+import json
 import os
+
 import numpy as np
 import torch
-import evaluate
+from transformers import (AutoModelForMaskedLM, AutoTokenizer,
+                          DataCollatorForLanguageModeling, Trainer,
+                          TrainingArguments)
+
+from data import prepare_lm_dataset
+from eval import evaluate_model
 from masking import prune_model
 from eval import evaluate
-
-metric = evaluate.load("accuracy", "f1")
-
-def compute_metrics(eval_pred):
-    logits, labels = eval_pred
-    predictions = np.argmax(logits, axis=-1)
-    return metric.compute(predictions=predictions, references=labels)
 
 
 def cross_evaluate_models(args, tokenizer, data_collator):
@@ -40,18 +36,24 @@ def cross_evaluate_models(args, tokenizer, data_collator):
 
     # Get the list of languages
     mask_files = os.listdir(args.masks_dir)
+    mask_files = [mask_file for mask_file in mask_files if 'average' in mask_file]
     print(f"Found masks: {mask_files}")
-    languages = [lang[10:12] for lang in mask_files]
+    languages = [lang[13:15] for lang in mask_files]
+    print(f"Languages: {languages}")
     # Create a dictionary of mask locations
-    mask_dict = {lang: os.path.join(args.masks_dir, f"head_mask_{lang}.npy") for lang in languages}
+    mask_dict = {lang: os.path.join(args.masks_dir, f"average_mask_{lang}.npy") for lang in languages}
 
-    for mask_language in languages:
+    mask_languages = [None] + languages 
+
+    for mask_language in mask_languages:
         model = AutoModelForMaskedLM.from_pretrained(args.model)
-        args.mask = mask_dict[mask_language]
 
-        model = prune_model(args, model)
+        if mask_language is not None:
+            args.mask = mask_dict[mask_language]
+            model = prune_model(args, model)
         
         for dataset_language in languages:
+            print(f"Evaluating {mask_language} on {dataset_language}...")
             args.languages = dataset_language
 
             dataset = prepare_lm_dataset(args, tokenizer)
@@ -60,19 +62,21 @@ def cross_evaluate_models(args, tokenizer, data_collator):
                 args=training_args,
                 train_dataset=dataset['train'],
                 eval_dataset=dataset['eval'],
-                data_collator=data_collator,
-                compute_metrics=compute_metrics
+                data_collator=data_collator
             )
 
-            eval_results = trainer.evaluate(eval_dataset=dataset['eval'])
-            print(eval_results)
+            # eval_results = trainer.evaluate(eval_dataset=dataset['eval'])
+            # print(eval_results)
 
-            # accuracy, perplexity = evaluate(args, model, trainer, head_mask=head_mask)
-            # print(f"Accuracy: {accuracy}, Perplexity: {perplexity}")
+            accuracy, perplexity = evaluate_model(args, model, trainer)
+            print(f"Accuracy: {accuracy}, Perplexity: {perplexity}")
+
+            with open(f"results_cross/{mask_language}_{dataset_language}.json", 'w') as f:
+                json.dump({"accuracy": accuracy.item(), "perplexity": perplexity.item()}, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--masks_dir", default="masks", type=str,
+    parser.add_argument("--masks_dir", default="masks/head_masks", type=str,
                         help="Directory containing the masks")
     parser.add_argument("--model", default="xlm-roberta-base", type=str,
                         help="Model to use")

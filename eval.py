@@ -1,7 +1,8 @@
 import torch
 from tqdm import tqdm
 
-def evaluate(args, model, trainer, head_mask=None):
+
+def evaluate_model(args, model, trainer):
     dataloader = trainer.get_eval_dataloader()
 
     for batch in dataloader:
@@ -18,7 +19,7 @@ def evaluate(args, model, trainer, head_mask=None):
 
         # Do a forward pass (not with torch.no_grad() since we need gradients for importance score - see below)
         outputs = model(
-            input_ids, attention_mask=input_mask, labels=label_ids, head_mask=head_mask
+            input_ids, attention_mask=input_mask, labels=label_ids
         )
         loss, logits, all_attentions = (
             outputs[0],

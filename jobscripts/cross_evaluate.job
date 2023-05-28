@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu_titanrtx_shared_course
+#SBATCH --gres=gpu:1
+#SBATCH --job-name=crossevaluate
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=3
+#SBATCH --time=6:00:00
+#SBATCH --mem=32000M
+#SBATCH --output=slurm_output_%A.out
+
+echo loading Lisa modules...
+module purge
+module load 2022
+module load Miniconda3/4.12.0
+
+cd $HOME/atcs-project/Cross-Lingual-Subnetwork-Analysis
+
+echo activating virtual env...
+source activate atcs-project2
+
+srun python cross_evaluate.py
+
+echo done
