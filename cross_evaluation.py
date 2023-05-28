@@ -13,7 +13,7 @@ from eval import evaluate_model
 from masking import prune_model
 
 
-def cross_evaluate_models(args, tokenizer, data_collator):
+def cross_evaluate_models(args, model, tokenizer, data_collator):
     """Evaluate the model for each language specific mask on each language."""
     print("Cross evaluating...")
     
@@ -32,8 +32,6 @@ def cross_evaluate_models(args, tokenizer, data_collator):
         save_strategy = 'no',
         load_best_model_at_end=False
     )
-
-    model = AutoModelForMaskedLM.from_pretrained(args.model)
 
     if args.mask_language != 'None':
         args.mask = os.path.join(args.masks_dir, f"average_mask_{args.mask_language}.npy")
@@ -83,7 +81,8 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
 
+    model = AutoModelForMaskedLM.from_pretrained(args.model)
     tokenizer.pad_token = tokenizer.eos_token
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
 
-    cross_evaluate_models(args, tokenizer, data_collator)
+    cross_evaluate_models(args, model, tokenizer, data_collator)

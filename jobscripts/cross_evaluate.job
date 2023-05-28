@@ -21,7 +21,7 @@ source activate atcs-project2
 
 for lang in None en nl fy he ar hi ur sw zu cy gd
 do
-    srun python cross_evaluation.py --mask_language $lang
+    srun python cross_evaluation.py --mask_language $lang --model 'finetuned_model_final'
 done 
 
 echo done
