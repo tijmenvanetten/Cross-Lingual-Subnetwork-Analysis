@@ -33,45 +33,33 @@ def cross_evaluate_models(args, tokenizer, data_collator):
         load_best_model_at_end=False
     )
 
-    # Get the list of languages
-    mask_files = os.listdir(args.masks_dir)
-    mask_files = [mask_file for mask_file in mask_files if 'average' in mask_file]
-    print(f"Found masks: {mask_files}")
-    languages = [lang[13:15] for lang in mask_files]
-    print(f"Languages: {languages}")
-    # Create a dictionary of mask locations
-    mask_dict = {lang: os.path.join(args.masks_dir, f"average_mask_{lang}.npy") for lang in languages}
+    model = AutoModelForMaskedLM.from_pretrained(args.model)
 
-    mask_languages = [None] + languages 
+    if args.mask_language is not None:
+        args.mask = os.path.join(args.masks_dir, f"average_mask_{args.mask_language}.npy")
+        model = prune_model(args, model)
+    
+    for dataset_language in args.eval_languages:
+        print(f"Evaluating {args.mask_language} on {dataset_language}...")
+        args.languages = dataset_language
 
-    for mask_language in mask_languages:
-        model = AutoModelForMaskedLM.from_pretrained(args.model)
+        dataset = prepare_lm_dataset(args, tokenizer)
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset['train'],
+            eval_dataset=dataset['eval'],
+            data_collator=data_collator
+        )
 
-        if mask_language is not None:
-            args.mask = mask_dict[mask_language]
-            model = prune_model(args, model)
-        
-        for dataset_language in languages:
-            print(f"Evaluating {mask_language} on {dataset_language}...")
-            args.languages = dataset_language
+        # eval_results = trainer.evaluate(eval_dataset=dataset['eval'])
+        # print(eval_results)
 
-            dataset = prepare_lm_dataset(args, tokenizer)
-            trainer = Trainer(
-                model=model,
-                args=training_args,
-                train_dataset=dataset['train'],
-                eval_dataset=dataset['eval'],
-                data_collator=data_collator
-            )
+        accuracy, perplexity = evaluate_model(args, model, trainer)
+        print(f"Accuracy: {accuracy}, Perplexity: {perplexity}")
 
-            # eval_results = trainer.evaluate(eval_dataset=dataset['eval'])
-            # print(eval_results)
-
-            accuracy, perplexity = evaluate_model(args, model, trainer)
-            print(f"Accuracy: {accuracy}, Perplexity: {perplexity}")
-
-            with open(f"results_cross/{mask_language}_{dataset_language}.json", 'w') as f:
-                json.dump({"accuracy": accuracy.item(), "perplexity": perplexity.item()}, f)
+        with open(f"results_cross/{args.mask_language}_{dataset_language}.json", 'w') as f:
+            json.dump({"accuracy": accuracy.item(), "perplexity": perplexity.item()}, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -87,6 +75,10 @@ if __name__ == "__main__":
                         help='Number of training samples.')
     parser.add_argument('--eval_samples', default=5000, type=int,
                         help='Number of test samples.')
+    parser.add_argument('--mask_language', default='en', type=str,
+                        help='Language to mask.')
+    parser.add_argument('--eval_languages', nargs="*", default=['en', 'nl', 'fy', 'he', 'ar', 'hi', 'ur', 'sw', 'zu', 'cy', 'gd'],
+                        help='Languages to evaluate on.')
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
