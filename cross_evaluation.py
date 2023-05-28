@@ -79,7 +79,7 @@ if __name__ == "__main__":
                         help='Languages to evaluate on.')
     args = parser.parse_args()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained('xlm-roberta-base')
 
     model = AutoModelForMaskedLM.from_pretrained(args.model)
     tokenizer.pad_token = tokenizer.eos_token
