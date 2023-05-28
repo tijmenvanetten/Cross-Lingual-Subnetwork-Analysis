@@ -4,10 +4,7 @@ from tqdm import tqdm
 
 def evaluate_model(args, model, trainer):
     dataloader = trainer.get_eval_dataloader()
-
-    for batch in dataloader:
-        print(batch['input_ids'][0])
-        break
+    model.eval()
 
     losses = []
     accuracy_sum = 0
