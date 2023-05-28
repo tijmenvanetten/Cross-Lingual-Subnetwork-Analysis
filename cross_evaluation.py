@@ -11,7 +11,6 @@ from transformers import (AutoModelForMaskedLM, AutoTokenizer,
 from data import prepare_lm_dataset
 from eval import evaluate_model
 from masking import prune_model
-from eval import evaluate
 
 
 def cross_evaluate_models(args, tokenizer, data_collator):
