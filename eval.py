@@ -25,12 +25,12 @@ def evaluate_model(args, model, trainer):
             outputs[1],
             outputs[-1],
         )
-        losses.append(loss)
+        losses.append(loss.item())
         true_preds = (torch.argmax(logits, -1) == label_ids) * (label_ids != -100)
         accuracy_sum += true_preds.sum() / (label_ids != -100).sum()
         total_count += 1
 
     accuracy = accuracy_sum / total_count
-    perplexity = torch.exp(torch.stack(losses).mean())
+    perplexity = torch.exp(torch.tensor(losses).mean())
 
     return accuracy, perplexity
