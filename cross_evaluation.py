@@ -35,7 +35,7 @@ def cross_evaluate_models(args, tokenizer, data_collator):
 
     model = AutoModelForMaskedLM.from_pretrained(args.model)
 
-    if args.mask_language is not None:
+    if args.mask_language is not 'None':
         args.mask = os.path.join(args.masks_dir, f"average_mask_{args.mask_language}.npy")
         model = prune_model(args, model)
     
