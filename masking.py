@@ -160,7 +160,7 @@ def mask_heads(args, model, eval_dataloader):
     return new_head_mask
 
 
-def prune_model(args, model)
+def prune_model(args, model):
     head_mask = torch.from_numpy(np.load(args.mask))
 
     heads_to_prune = {}
