@@ -70,7 +70,7 @@ if __name__ == "__main__":
                         help='Number of test samples.')
     parser.add_argument('--mask_language', default='en', type=str,
                         help='Language to mask.')
-    parser.add_argument('--languages', nargs="*", default='en', type=str
+    parser.add_argument('--languages', nargs="*", default='en', type=str,
                         help='Languages to evaluate on.')
     args = parser.parse_args()
 
