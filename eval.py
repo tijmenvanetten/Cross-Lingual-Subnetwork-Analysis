@@ -31,6 +31,7 @@ def evaluate_model(args, model, trainer):
         total_count += 1
 
     accuracy = accuracy_sum / total_count
+
     perplexity = torch.exp(torch.tensor(losses).mean())
 
     return accuracy, perplexity
