@@ -12,6 +12,9 @@ from masking import prune_model
 from scipy.spatial import distance_matrix
 from scipy.spatial.distance import cdist
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 def RDM(reps):
     # p is Minkowski p-norm 
     dist_matrices = []
@@ -82,9 +85,14 @@ def initialize_rsa(args, model1, model2, tokenizer, data_collator):
     
     return rdms
 
-def plot_RSA(rsa_matrix):
-    pass
+def plot_RSA(args, rsa_matrix):
+    ax = sns.heatmap(rsa_matrix, linewidth=0.5)
 
+    if len(args.compare_languages) == 1:
+        plt.savefig(f'/results_rsa/rsa_full_sub_{args.compare_languages[0]}')
+    else:
+        plt.savefig(f'/results_rsa/rsa_2lang_{args.compare_languages[0]}_{args.compare_languages[1]}')
+        
 def RSA(distances):
     return cdist(distances[0], distances[1], 'cosine')
 
@@ -134,4 +142,4 @@ if __name__ == "__main__":
 
     # Compare RDMS with RSA
     rsa_matrix = RSA(distances)
-    plot_RSA(rsa_matrix)
+    plot_RSA(args, rsa_matrix)
