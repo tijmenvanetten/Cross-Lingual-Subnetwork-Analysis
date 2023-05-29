@@ -32,7 +32,6 @@ def group_texts_lm(examples):
     
     return result 
 
-
 def prepare_lm_dataset(args, tokenizer):
     languages = [args.languages] if isinstance(args.languages, str) else args.languages
 
@@ -132,4 +131,44 @@ def prepare_typology_dataset(args, tokenizer):
     # dataset = tokenized_cc100.rename_column("input_ids", "text")
 
     return tokenized_cc100
+
+def preprocess_function_rsa(examples, tokenizer):
+    return tokenizer(examples['0'], padding=True, truncation=True)
+
+def prepare_rsa_dataset(args, tokenizer):
+    lang1 = []
+    lang2 = []
+    if len(args.compare_languages) == 1:
+        samples = list(load_dataset("tatoeba", lang1=args.compare_languages[0], lang2='fr', split=f'train[:{args.test_samples}]'))
+        for elem in samples:
+            lang1.append(elem['translation'][args.compare_languages[0]])
+
+        tatoeba = DatasetDict({
+            "lang1": Dataset.from_pandas(pd.DataFrame(data=lang1)),
+            "lang2": Dataset.from_pandas(pd.DataFrame(data=lang1)),
+            })
+    else:
+        lang1 = []
+        lang2 = []
+
+        samples = list(load_dataset("tatoeba", lang1=args.compare_languages[0], lang2=args.compare_languages[1], split=f'train[:{args.test_samples}]'))
+        
+        for elem in samples:
+            lang1.append(elem['translation'][args.compare_languages[0]])
+            lang2.append(elem['translation'][args.compare_languages[1]])
+
+        tatoeba = DatasetDict({
+            "lang1": Dataset.from_pandas(pd.DataFrame(data=lang1)),
+            "lang2": Dataset.from_pandas(pd.DataFrame(data=lang2)),
+            })
+
+    dataset = tatoeba.map(
+            preprocess_function_rsa,
+            fn_kwargs={"tokenizer" : tokenizer},
+            batched=True,
+            num_proc=6,
+            remove_columns=['0']
+        )
+
+    return dataset
 
