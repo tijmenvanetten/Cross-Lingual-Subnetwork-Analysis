@@ -87,12 +87,16 @@ def initialize_rsa(args, model1, model2, tokenizer, data_collator):
 
 def plot_RSA(args, rsa_matrix):
     ax = sns.heatmap(rsa_matrix, linewidth=0.5)
-
+    
     if len(args.compare_languages) == 1:
-        plt.savefig(f'/results_rsa/rsa_full_sub_{args.compare_languages[0]}')
+        plt.title(f'Similarity full- and subnetwork for {args.compare_languages[0]}')
+        plt.savefig(f'./results_rsa/rsa_full_sub_{args.compare_languages[0]}.png')
     else:
-        plt.savefig(f'/results_rsa/rsa_2lang_{args.compare_languages[0]}_{args.compare_languages[1]}')
-        
+        plt.title(f'Similarity between {args.compare_languages[0]} and {args.compare_languages[1]}')
+        plt.savefig(f'./results_rsa/rsa_2lang_{args.compare_languages[0]}_{args.compare_languages[1]}.png')
+
+    plt.clf()
+
 def RSA(distances):
     return cdist(distances[0], distances[1], 'cosine')
 
@@ -117,29 +121,51 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained('xlm-roberta-base')
 
     model = AutoModelForMaskedLM.from_pretrained(args.checkpoint)
+    # 'ar', 'cy', 'en' fy', 'gd', 'he', 'hi', 'nl', 
+    # poss_lang = ['sw', 'ur', 'zu']
+    # niet hi & ar en niet he swh en niet hi nl
+    # combinations =  [('ar', 'en'), ('ar', 'fy'), ('ar', 'he'), ('ar', 'hi'), ('ar', 'nl'), ('ar', 'ur'),
+    #                  ('cy', 'en'), ('cy', 'gd'), ('cy', 'he'),
+    #                  ('en', 'fy'), ('en', 'gd'), ('en', 'he'), ('en', 'hi'), ('en', 'nl'), ('en', 'sw'), ('en', 'ur'), ('en', 'zu'),
+    #                  ('fy', 'he'), ('fy', 'nl'), ('fy', 'sw'), 
+    #                  ('gd', 'nl'),
+    #                  ('he', 'nl'), ('he', 'sw'), 
+    #                  ('hi', 'nl'), ('hi', 'ur'),
+    #                  ('nl', 'sw')
+    #                  ]
 
-    if len(args.compare_languages) != 1:
-        # Compare multiple languages with their subnetworks
-        args.mask = os.path.join(args.masks_dir, f"average_mask_{args.compare_languages[0]}.npy")
-        model1 = prune_model(args, model)
+    combinations =  [
+                     ('hi', 'ur'),
+                     ('nl', 'sw')
+                     ]
+    for i in range(len(combinations)):
+        args.compare_languages = combinations[i]
+        if len(args.compare_languages) != 1:
+            # Compare multiple languages with their subnetworks
+            args.mask = os.path.join(args.masks_dir, f"average_mask_{args.compare_languages[0]}.npy")
+            model1 = prune_model(args, model)
 
-        args.mask = os.path.join(args.masks_dir, f"average_mask_{args.compare_languages[1]}.npy")
-        model2 = prune_model(args, model)
-    else:
-        # Compare subnetwork with full network 
-        args.mask = os.path.join(args.masks_dir, f"average_mask_{args.compare_languages[0]}.npy")
-        model2 = prune_model(args, model)
-        model1 = model
+            args.mask = os.path.join(args.masks_dir, f"average_mask_{args.compare_languages[1]}.npy")
+            model2 = prune_model(args, model)
+        else:
+            # Compare subnetwork with full network 
+            args.mask = os.path.join(args.masks_dir, f"average_mask_{args.compare_languages[0]}.npy")
+            print('Masked used: ', args.mask)
+            model2 = prune_model(args, model)
+            model1 = model
 
-    tokenizer.pad_token = tokenizer.eos_token
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
+        tokenizer.pad_token = tokenizer.eos_token
+        data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
 
-    # Get representations of full model / subnetwork or lang1 / lang2
-    reps = initialize_rsa(args, model1, model2, tokenizer, data_collator)
+        # Get representations of full model / subnetwork or lang1 / lang2
+        reps = initialize_rsa(args, model1, model2, tokenizer, data_collator)
 
-    # Create two RDMS with distances
-    distances = RDM(reps)
+        # Create two RDMS with distances
+        distances = RDM(reps)
 
-    # Compare RDMS with RSA
-    rsa_matrix = RSA(distances)
-    plot_RSA(args, rsa_matrix)
+        # Compare RDMS with RSA
+        rsa_matrix = RSA(distances)
+        plot_RSA(args, rsa_matrix)
+
+        del model2
+        del model1
