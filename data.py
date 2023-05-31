@@ -92,32 +92,57 @@ def preprocess_typology_features(example, language, feature):
 def preprocess_function_typo(examples, tokenizer):
     return tokenizer(examples['text'], padding=True, truncation=True)
 
+def load_dataset_subset(language, num_samples):
+    return load_dataset("cc100", lang=language, split="train", streaming=True).take(num_samples)
+                   
+def preprocess_language(language_set, language, feature):
+    return language_set.map(preprocess_typology_features, fn_kwargs={"language": language, "feature": feature})
+
 def collect_langs(langs, num_samples, feature):
-    lang_sets = []
+    lang_sets = {}
     for lang in langs:
-        samples = list(load_dataset("cc100", lang=lang, split="train", streaming=True).take(num_samples).map(
-            preprocess_typology_features,
-            fn_kwargs={"language": lang, "feature": feature},
-        ))
-        lang_sets += samples
+        samples = load_dataset_subset(lang, num_samples)
+        samples = preprocess_language(samples, lang, feature)
+        lang_sets[lang] = list(samples)
     return lang_sets
+
+def merge_dataset_dict(dataset: dict):
+    return sum(dataset.values(), [])
+
+def split_held_out_set(held_out_sets, eval_samples):
+    eval_set = {}
+    test_set = {}
+    for lang, lang_set in held_out_sets.items():
+        lang_eval_set, lang_test_set = lang_set[:eval_samples], lang_set[eval_samples:]
+        eval_set[lang] = lang_eval_set 
+        test_set[lang] = lang_test_set
+    return eval_set, test_set
 
 def prepare_typology_dataset(args, tokenizer):
     train_langs = [args.train_langs] if isinstance(args.train_langs, str) else args.train_langs
     eval_langs = [args.eval_langs] if isinstance(args.eval_langs, str) else args.eval_langs
 
-    train_sets = collect_langs(train_langs, args.train_samples, args.feature)
+    # Collect training dataset
+    train_set_dict = collect_langs(train_langs, args.train_samples, args.feature)
+    train_set = merge_dataset_dict(dataset=train_set_dict)
+
+    # Collect evaluation and test set
     held_out_sets = collect_langs(eval_langs, args.eval_samples + args.test_samples, args.feature)
-    random.shuffle(held_out_sets)
+    eval_set_dict, test_set_dict = split_held_out_set(held_out_sets, args.eval_samples)
 
-    eval_idx = args.eval_samples * len(eval_langs)
-    eval_sets, test_sets = held_out_sets[:eval_idx], held_out_sets[eval_idx:]
+    eval_set = merge_dataset_dict(dataset=eval_set_dict)
+    test_set = merge_dataset_dict(dataset=test_set_dict)
 
-    cc100 = DatasetDict({
-        "train": Dataset.from_pandas(pd.DataFrame(data=train_sets)),
-        "eval": Dataset.from_pandas(pd.DataFrame(data=eval_sets)),
-        "test": Dataset.from_pandas(pd.DataFrame(data=test_sets)),
-        }).shuffle(42)
+    dataset_dict = {
+        "train": Dataset.from_pandas(pd.DataFrame(data=train_set)),
+        "eval": Dataset.from_pandas(pd.DataFrame(data=eval_set)),
+        "test": Dataset.from_pandas(pd.DataFrame(data=test_set))
+        }
+    
+    # Separately append test set per language
+    for lang, lang_test_set in test_set_dict.items():
+        dataset_dict[lang] = Dataset.from_pandas(pd.DataFrame(data=lang_test_set))
+    cc100 = DatasetDict(dataset_dict).shuffle(42)
     
     tokenized_cc100 = cc100.map(
             preprocess_function_typo,
