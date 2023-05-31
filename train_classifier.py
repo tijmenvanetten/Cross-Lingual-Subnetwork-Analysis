@@ -1,4 +1,5 @@
 import argparse
+import json
 
 import eval
 import numpy as np
@@ -25,7 +26,7 @@ def compute_metrics(eval_pred):
 
 def train_classifier(args, model, dataset, data_collator, skip_train=False):
     training_args = TrainingArguments(
-        output_dir=f"logs/results_classifier_{args.feature}",
+        output_dir=f"logs/results_classifier_{args.feature=}_{args.mask=}",
         overwrite_output_dir = 'True',
         evaluation_strategy="epoch",
         learning_rate=1e-3,
@@ -51,10 +52,17 @@ def train_classifier(args, model, dataset, data_collator, skip_train=False):
     trainer.train()
     print(f'Evaluating trained classifier on test dataset',)
     test_results = trainer.evaluate(eval_dataset=dataset["test"])
-    print(test_results)
+    for lang in args.eval_langs:
+        test_results[f'accuracy_{lang}'] = trainer.evaluate(eval_dataset=dataset[lang])
 
-    print("Saving model...")
-    trainer.save_model()
+    with open('results.txt', 'a') as out:
+        out.write(f"{args.feature=}, {args.mask=}")
+        json.dump(test_results, out, indent=2)
+        out.write('\n')
+
+    if args.save_model:
+        print("Saving model...")
+        trainer.save_model()
 
 
 if __name__ == '__main__':
@@ -66,11 +74,13 @@ if __name__ == '__main__':
                         help='Language to finetune on.')
     parser.add_argument('--feature', default="writing_system", type=str,
                        help='Typological feature to classify: word_order, writing_system')                 
-    parser.add_argument('--hidden_dim', default=768, type=int,
+    parser.add_argument('--hidden_dim', default=100, type=int,
                        help='Hidden dimension size of the classifier')
+    parser.add_argument('--pooling_type', default='cls', type=str,
+                       help='Specify how sentence encodings are pooled')
     parser.add_argument('--model', default="xlm-roberta-base", type=str,
                        help='Pretrained model tokenizer to use.')
-    parser.add_argument('--checkpoint', default="logs/results_['en', 'nl', 'fy', 'he', 'ar', 'hi', 'ur']/", type=str,
+    parser.add_argument('--checkpoint', default="logs/results_['en', 'nl', 'fy', 'he', 'ar', 'hi', 'ur', 'sw', 'zu', 'cy', 'gd']", type=str,
                        help='Pretrained encoder to use.')
     parser.add_argument('--train_samples', default=10000, type=int,
                        help='Number of training samples per language')
@@ -82,21 +92,20 @@ if __name__ == '__main__':
                        help='Number of epochs to wait before early stopping')
     parser.add_argument('--threshold', default=0.1, type=float,
                        help='Specify how much performance metric must improve before early stopping')
+    parser.add_argument('--save_model', action='store_true',
+                       help='Specify how much performance metric must improve before early stopping')
     parser.add_argument('--mask', default=None, type=str,
                         help='Mask to use for training')
     
     args = parser.parse_args()
 
-    num_labels = num_labels_feature[args.feature]
-
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=True)
 
     print(f'Initializing model...', flush=True)
     # Load fine-tuned model into model for sequence classification
+    num_labels = num_labels_feature[args.feature]
     model = XLMRobertaForSequenceClassification.from_pretrained(args.checkpoint, num_labels=num_labels)
-    print(model)
-    model.classifier = ProbingClassificationHead(768, 100, 0.5, num_labels)
-    print(model)
+    model.classifier = ProbingClassificationHead(input_size=768, hidden_size=args.hidden_dim, dropout=0.5, num_labels=num_labels, pooling=args.pooling_type)
 
     if args.mask:
         model = prune_model(args, model)
@@ -108,6 +117,8 @@ if __name__ == '__main__':
     # Prepare dataset
     print(f'Starting data preprocessing...', flush=True)
     cc100_typology_dataset = prepare_typology_dataset(args, tokenizer)
+    cc100_typology_dataset.shuffle(12)
+    print(cc100_typology_dataset['train'][:100])
 
     # Use end of sentence token as pad token
     tokenizer.pad_token = tokenizer.eos_token

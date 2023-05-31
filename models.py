@@ -7,15 +7,21 @@ import torch.nn.functional as F
 class ProbingClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
-    def __init__(self, input_size, hidden_size, dropout, num_labels):
+    def __init__(self, input_size, hidden_size, dropout, num_labels, pooling='cls'):
         super().__init__()
+        self.pooling = pooling
         self.dense = nn.Linear(input_size, hidden_size)
         classifier_dropout = dropout
         self.dropout = nn.Dropout(classifier_dropout)
         self.out_proj = nn.Linear(hidden_size, num_labels)
 
     def forward(self, features, **kwargs):
-        x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
+        if self.pooling == 'mean':
+            x = torch.mean(features, dim=1)  # take <s> token (equiv. to [CLS])
+        elif self.pooling == 'max':
+            x = torch.max(features, dim=1)  # take <s> token (equiv. to [CLS])
+        else:
+            x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         x = self.dropout(x)
         x = self.dense(x)
         x = torch.relu(x)
