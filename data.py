@@ -164,7 +164,7 @@ def prepare_rsa_dataset(args, tokenizer):
     lang1 = []
     lang2 = []
     if len(args.compare_languages) == 1:
-        samples = list(load_dataset("tatoeba", lang1=args.compare_languages[0], lang2='fr', split=f'train[:{args.test_samples}]'))
+        samples = list(load_dataset("tatoeba", lang1='en', lang2=args.compare_languages[0], split=f'train[:{args.test_samples}]'))
         for elem in samples:
             lang1.append(elem['translation'][args.compare_languages[0]])
 
@@ -175,9 +175,20 @@ def prepare_rsa_dataset(args, tokenizer):
     else:
         lang1 = []
         lang2 = []
-
-        samples = list(load_dataset("tatoeba", lang1=args.compare_languages[0], lang2=args.compare_languages[1], split=f'train[:{args.test_samples}]'))
         
+        if 'sw' in args.compare_languages:
+            args.compare_languages = list(args.compare_languages)
+            idx = args.compare_languages.index('sw')
+            args.compare_languages[idx] = 'swh'
+        try:
+            print('Language pair:', args.compare_languages[0], args.compare_languages[1])
+            samples = list(load_dataset("tatoeba", lang1=args.compare_languages[0], lang2=args.compare_languages[1], split=f'train[:{args.test_samples}]'))
+        except FileNotFoundError:
+            print('Language pair:', args.compare_languages[1], args.compare_languages[0])
+            samples = list(load_dataset("tatoeba", lang1=args.compare_languages[1], lang2=args.compare_languages[0], split=f'train[:{args.test_samples}]'))
+        except ValueError:
+            print('Trying again with the same configuration but with the whole dataset')
+            samples = list(load_dataset("tatoeba", lang1=args.compare_languages[0], lang2=args.compare_languages[1], split=f'train'))
         for elem in samples:
             lang1.append(elem['translation'][args.compare_languages[0]])
             lang2.append(elem['translation'][args.compare_languages[1]])
